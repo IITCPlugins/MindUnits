@@ -1,0 +1,9 @@
+{
+  "name": "IITC plugin: LogFields",
+  "id": "iitc_plugin_LogFields",
+  "category": "Misc",
+  "description": "Log fields MUs",
+  "author": "McBen",
+  "entry": "src/Main.ts",
+  "minimize": false
+}
