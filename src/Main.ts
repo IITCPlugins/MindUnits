@@ -20,69 +20,76 @@ class LogFields implements Plugin.Class {
         console.log("LogField: stored fields:", length);
     }
 
+
     onChatData = (chatEvent: EventPublicChatDataAvailable): void => {
         const fullChat = chatEvent.result;
-        chatEvent.result.forEach(chatLine => {
+        fullChat.forEach(chatLine => {
             if (chatLine[2].plext.plextType !== "SYSTEM_BROADCAST") return;
 
             const markup = chatLine[2].plext.markup;
 
-            // "Field"
             if (markup[0][0] === "PLAYER" && markup[1][1].plain === " created a Control Field @" && markup[2][0] === "PORTAL") {
 
-                if (this.isDoubleField(chatEvent.result, chatLine)) {
-                    // console.debug("LofField: double field (skipped)")
-                    return;
-                }
-                const mus = markup[4][0] === "TEXT" ? parseInt(markup[4][1].plain) : 0;
-                if (mus < MINIMUM_MUS) {
-                    // console.debug("LogField: skipped because MUs to low");
-                    return;
-                }
+                const guid = chatLine[0];
+                const time = chatLine[1];
                 const portal_raw = markup[2][1] as Intel.MarkUpPortalType;
-                const pos1: Position = [portal_raw.latE6, portal_raw.lngE6];
+                const atPosition: Position = [portal_raw.latE6, portal_raw.lngE6];
+                const mindunits = markup[4][0] === "TEXT" ? parseInt(markup[4][1].plain) : 0;
 
-                const pos2 = this.findSecondPortal(chatEvent.result, chatLine[1], pos1);
-                if (!pos2) {
-                    console.error("LogField: no link msg found");
-                    return;
-                }
-
-                const pos3 = this.findThirdPortal(pos1, pos2);
-                if (!pos3) {
-                    console.debug("LogField: third portal not found");
-                    return;
-                }
-
-                // console.log("Store: ", mus + " MUs", pos1, pos2, pos3);
-                this.store.setItem(chatLine[0], {
-                    time: chatLine[1],
-                    mus: mus,
-                    positions: [pos1, pos2, pos3]
+                const relatedChats = fullChat.filter(chat => {
+                    return chat[1] === time &&
+                        chat[0] !== guid &&
+                        chat[2].plext.markup[0][0] === "PLAYER" &&
+                        chat[2].plext.markup[0][1].plain === markup[0][1].plain &&
+                        chat[2].plext.plextType === "SYSTEM_BROADCAST";
                 });
+
+                this.onCreatedFieldMsg(relatedChats, guid, time, mindunits, atPosition);
             }
         });
     }
 
 
+    onCreatedFieldMsg(relatedChats: Intel.ChatLine[], guid: string, time: number, mindunits: number, pos1: Position) {
 
-    isDoubleField(chat: Intel.ChatLine[], current: Intel.ChatLine): boolean {
-        return chat.some(chatline => {
-            if (chatline[1] !== current[1] || chatline == current) return false;
-            const markup = chatline[2].plext.markup;
+        if (mindunits < MINIMUM_MUS) {
+            return;
+        }
 
-            return markup[1][1].plain === " created a Control Field @" &&
-                markup[0][0] === "PLAYER" &&
-                markup[2][0] === "PORTAL";
-            // compare portal?
+        if (this.isDoubleField(relatedChats)) {
+            return;
+        }
+
+        const pos2 = this.findSecondPortal(relatedChats, pos1);
+        if (!pos2) {
+            console.error("LogField: no link msg found");
+            return;
+        }
+
+        const pos3 = this.findThirdPortal(pos1, pos2);
+        if (!pos3) {
+            console.debug("LogField: third portal not found");
+            return;
+        }
+
+        this.store.setItem(guid, {
+            time,
+            mus: mindunits,
+            pos: [pos1, pos2, pos3]
         });
     }
 
-    findSecondPortal(chat: Intel.ChatLine[], time: number, pos1: Position): Position | undefined {
+
+    isDoubleField(relatedChats: Intel.ChatLine[]): boolean {
+        return relatedChats.some(chatline => {
+            const markup = chatline[2].plext.markup;
+            return markup[1][1].plain === " created a Control Field @"
+        });
+    }
+
+    findSecondPortal(relatedChats: Intel.ChatLine[], pos1: Position): Position | undefined {
         let result: Position | undefined;
-        chat.some(chatLine => {
-            if (chatLine[2].plext.plextType !== "SYSTEM_BROADCAST") return false;
-            if (chatLine[1] !== time) return false;
+        relatedChats.some(chatLine => {
 
             const markup = chatLine[2].plext.markup;
 
