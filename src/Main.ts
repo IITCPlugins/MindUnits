@@ -62,16 +62,17 @@ class LogFields implements Plugin.Class {
 
         const pos2 = this.findSecondPortal(relatedChats, pos1);
         if (!pos2) {
-            console.error("LogField: no link msg found");
+            // console.error("LogField: no link msg found");
             return;
         }
 
         const pos3 = this.findThirdPortal(pos1, pos2);
         if (!pos3) {
-            console.debug("LogField: third portal not found");
+            // console.debug("LogField: third portal not found");
             return;
         }
 
+        console.info(`-FIELD- ${mindunits}`);
         this.store.setItem(guid, {
             time,
             mus: mindunits,
@@ -89,8 +90,8 @@ class LogFields implements Plugin.Class {
 
     findSecondPortal(relatedChats: Intel.ChatLine[], pos1: Position): Position | undefined {
         let result: Position | undefined;
-        relatedChats.some(chatLine => {
 
+        relatedChats.some(chatLine => {
             const markup = chatLine[2].plext.markup;
 
             // "linked"
@@ -114,8 +115,8 @@ class LogFields implements Plugin.Class {
     }
 
     findThirdPortal(pos1: Position, pos2: Position): Position | undefined {
-        const portal1 = window.findPortalGuidByPositionE6(pos1[0], pos1[1]);
-        const portal2 = window.findPortalGuidByPositionE6(pos2[0], pos2[1]);
+        const portal1 = this.findPortalGuidByPositionE6(pos1[0], pos1[1]);
+        const portal2 = this.findPortalGuidByPositionE6(pos2[0], pos2[1]);
         if (!portal1 || !portal2) {
             console.debug("LogField: cannot find guid of portal 1 or 2");
             return;
@@ -139,6 +140,33 @@ class LogFields implements Plugin.Class {
         }
 
         console.log("LogField: TODO check multilayer");
+        return;
+    }
+
+    private findPortalGuidByPositionE6(latE6: number, lngE6: number): string | undefined {
+
+        for (const guid in window.portals) {
+            const data = window.portals[guid].options.data;
+            if (data.latE6 == latE6 && data.lngE6 == lngE6) return guid;
+        }
+
+        // now try searching through fields
+        for (const fguid in window.fields) {
+            const points = window.fields[fguid].options.data.points;
+
+            for (var i in points) {
+                var point = points[i];
+                if (point.latE6 == latE6 && point.lngE6 == lngE6) return point.guid;
+            }
+        }
+
+        // and finally search through links
+        for (const lguid in window.links) {
+            const l = window.links[lguid].options.data;
+            if (l.oLatE6 == latE6 && l.oLngE6 == lngE6) return l.oGuid;
+            if (l.dLatE6 == latE6 && l.dLngE6 == lngE6) return l.dGuid;
+        }
+
         return;
     }
 
