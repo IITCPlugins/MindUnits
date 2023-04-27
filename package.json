@@ -1,6 +1,5 @@
 {
   "dependencies": {
-    "@types/localforage": "^0.0.34",
     "iitcpluginkit": "^1.7.1",
     "localforage": "^1.10.0"
   },
