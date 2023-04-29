@@ -4,13 +4,25 @@ import * as localForage from "localforage";
 const MINIMUM_MUS = 100;
 
 type Position = [number, number];
+interface StoredField {
+    time: number;
+    mus: number;
+};
 
 class LogFields implements Plugin.Class {
 
     private store: LocalForage;
+    private layer: L.LayerGroup<any>;
+    private mustrings: Map<string, L.Marker> = new Map();
 
     async init() {
         window.addHook("publicChatDataAvailable", this.onChatData);
+        window.addHook("fieldAdded", this.onFieldAdd);
+        window.addHook("fieldRemove", this.onFieldRemove);
+
+        this.layer = new L.LayerGroup();
+        window.addLayerGroup("MUs", this.layer, true);
+
         this.store = localForage.createInstance({
             name: "FieldDB",
             driver: [localForage.WEBSQL, localForage.INDEXEDDB],
@@ -18,8 +30,23 @@ class LogFields implements Plugin.Class {
 
         const length = await this.store.length();
         console.log("LogField: stored fields:", length);
+
+        this.setupCss();
     }
 
+
+    private setupCss(): void {
+        $("<style>")
+            .prop("type", "text/css")
+            .html(".plugin-logfields-numbers {\
+                font-size: 12px;\
+                color: #121230;\
+                font-family: monospace;\
+                text-align: center;\
+                pointer-events: none; \
+              }")
+            .appendTo("head");
+    }
 
     onChatData = (chatEvent: EventPublicChatDataAvailable): void => {
         const fullChat = chatEvent.result;
@@ -50,7 +77,7 @@ class LogFields implements Plugin.Class {
     }
 
 
-    onCreatedFieldMsg(relatedChats: Intel.ChatLine[], guid: string, time: number, mindunits: number, pos1: Position) {
+    async onCreatedFieldMsg(relatedChats: Intel.ChatLine[], guid: string, time: number, mindunits: number, pos1: Position) {
 
         if (mindunits < MINIMUM_MUS) {
             return;
@@ -73,12 +100,76 @@ class LogFields implements Plugin.Class {
         }
 
         console.info(`-FIELD- ${mindunits}`);
-        this.store.setItem(guid, {
+        const myguid = this.pos2guid([pos1, pos2, pos3]);
+
+        const old = await this.store.getItem(myguid) as StoredField;
+        if (old) {
+            console.assert(old.mus === mindunits, "MUS different");
+            if (old.time >= time) return;
+        }
+
+        const iitcField = this.findField([pos1, pos2, pos3]);
+        if (iitcField) {
+            this.showFieldMus(iitcField, mindunits);
+        }
+
+        this.store.setItem(myguid, {
             time,
-            mus: mindunits,
-            pos: [pos1, pos2, pos3]
+            mus: mindunits
         });
     }
+
+    private pos2guid(pos_in: Position[]): string {
+        const pos = this.posOrder(pos_in);
+        const all = [...pos[0], ...pos[1], ...pos[2]];
+        return all.map(v => (v < 0 ? "" : "+") + v.toString()).join();
+    }
+
+    private posOrder(pos: Position[]): Position[] {
+        return pos.sort((a, b) => {
+            const d = b[0] - a[0];
+            if (d == 0) return b[1] - a[1];
+            return d;
+        });
+    }
+
+    private findField(p: Position[]): IITC.Field | undefined {
+
+        for (const guid in window.fields) {
+            const field = window.fields[guid];
+            const fp = field.options.data.points
+
+            if (this.compField(fp, p)) return field;
+        }
+
+        return;
+    }
+
+    private compField(fp: { latE6: number, lngE6: number }[], p: Position[]): boolean {
+        return (
+            (this.equal(fp[0], p[0]) &&
+                ((this.equal(fp[1], p[1]) && this.equal(fp[2], p[2]))
+                    ||
+                    (this.equal(fp[1], p[2]) && this.equal(fp[2], p[1])))
+            ) ||
+            (this.equal(fp[0], p[1]) &&
+                ((this.equal(fp[1], p[0]) && this.equal(fp[2], p[2]))
+                    ||
+                    (this.equal(fp[1], p[2]) && this.equal(fp[2], p[0])))
+            ) ||
+            (this.equal(fp[0], p[2]) &&
+                ((this.equal(fp[1], p[1]) && this.equal(fp[2], p[0]))
+                    ||
+                    (this.equal(fp[1], p[0]) && this.equal(fp[2], p[1])))
+            )
+        );
+    }
+
+    private equal(a: { latE6: number, lngE6: number }, b: Position): boolean {
+        return a.latE6 === b[0] && a.lngE6 === b[1];
+    }
+
+
 
 
     isDoubleField(relatedChats: Intel.ChatLine[]): boolean {
@@ -184,6 +275,56 @@ class LogFields implements Plugin.Class {
 
         return guids;
     }
+
+
+    onFieldAdd = async (fieldEvent: EventFieldAdded): Promise<void> => {
+        const p = fieldEvent.field.options.data.points.map(p => <Position>[p.latE6, p.lngE6]);
+        const myguid = this.pos2guid(p);
+
+        const old = await this.store.getItem(myguid) as StoredField;
+        if (old) {
+            this.showFieldMus(fieldEvent.field, old.mus);
+        }
+    }
+
+    onFieldRemove = (fieldEvent: EventFieldRemoved): void => {
+        const guid = fieldEvent.field.options.guid;
+
+        const text = this.mustrings.get(guid);
+        if (text) {
+            this.layer.removeLayer(text);
+            this.mustrings.delete(guid);
+        }
+    }
+
+
+    showFieldMus(field: IITC.Field, mindunits: number): void {
+        const guid = field.options.guid;
+        const text = this.mustrings.get(guid);
+        if (text) return;
+
+
+        const marker = L.marker(this.fieldCenter(field), {
+            icon: L.divIcon({
+                className: "plugin-logfields-numbers",
+                iconSize: [48, 12],
+                html: mindunits.toString()
+            }),
+            interactive: false
+        });
+
+        this.mustrings.set(guid, marker);
+        this.layer.addLayer(marker);
+    }
+
+    private fieldCenter(field: IITC.Field): L.LatLng {
+        const p = field.options.data.points;
+        return L.latLng(
+            (p[0].latE6 + p[1].latE6 + p[2].latE6) / 3 * 1e-6,
+            (p[0].lngE6 + p[1].lngE6 + p[2].lngE6) / 3 * 1e-6,
+        )
+    }
+
 }
 
 
