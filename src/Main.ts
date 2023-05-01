@@ -2,6 +2,7 @@ import * as Plugin from "iitcpluginkit";
 import * as localForage from "localforage";
 
 const MINIMUM_MUS = 100;
+const TOOLTIP_DELAY = 1000;
 
 type Position = [number, number];
 interface StoredField {
@@ -15,10 +16,13 @@ class LogFields implements Plugin.Class {
     private layer: L.LayerGroup<any>;
     private mustrings: Map<string, L.Marker> = new Map();
 
+    private mouseDelayTimer: number | undefined;
+
     async init() {
         window.addHook("publicChatDataAvailable", this.onChatData);
         window.addHook("fieldAdded", this.onFieldAdd);
-        window.addHook("fieldRemove", this.onFieldRemove);
+        window.addHook("fieldRemoved", this.onFieldRemoved);
+        window.map.on("MouseMove", this.onMouseMove);
 
         this.layer = new L.LayerGroup();
         window.addLayerGroup("MUs", this.layer, true);
@@ -278,16 +282,22 @@ class LogFields implements Plugin.Class {
 
 
     onFieldAdd = async (fieldEvent: EventFieldAdded): Promise<void> => {
-        const p = fieldEvent.field.options.data.points.map(p => <Position>[p.latE6, p.lngE6]);
-        const myguid = this.pos2guid(p);
-
-        const old = await this.store.getItem(myguid) as StoredField;
-        if (old) {
-            this.showFieldMus(fieldEvent.field, old.mus);
+        const mindunits = await this.getFieldMUSStored(fieldEvent.field);
+        if (mindunits) {
+            this.showFieldMus(fieldEvent.field, mindunits);
         }
     }
 
-    onFieldRemove = (fieldEvent: EventFieldRemoved): void => {
+    async getFieldMUSStored(field: IITC.Field): Promise<number | undefined> {
+        const p = field.options.data.points.map(p => <Position>[p.latE6, p.lngE6]);
+        const myguid = this.pos2guid(p);
+
+        const old = await this.store.getItem(myguid) as StoredField;
+        if (old) return old.mus;
+        return;
+    }
+
+    onFieldRemoved = (fieldEvent: EventFieldRemoved): void => {
         const guid = fieldEvent.field.options.guid;
 
         const text = this.mustrings.get(guid);
@@ -324,6 +334,65 @@ class LogFields implements Plugin.Class {
             (p[0].lngE6 + p[1].lngE6 + p[2].lngE6) / 3 * 1e-6,
         )
     }
+
+
+    onMouseMove = (ev: L.LeafletMouseEvent) => {
+        window.clearTimeout(this.mouseDelayTimer);
+        this.mouseDelayTimer = window.setTimeout(() => this.checkForTooltip(ev), TOOLTIP_DELAY);
+    }
+
+
+    checkForTooltip(ev: L.LeafletMouseEvent): void {
+        const point = ev.layerPoint;
+        const fields = [];
+
+        for (var guid in window.fields) {
+            const field = window.fields[guid];
+
+            const positions: L.Point[][] = (<any>field)._rings;
+
+            if (positions && this.pnpoly(positions[0], point)) {
+                fields.push(field);
+            }
+        }
+
+        if (fields.length > 0) {
+            this.showTooltip(ev.latlng, fields);
+        }
+    }
+
+    pnpoly(polygon: L.Point[], point: L.Point) {
+        var inside = 0;
+        // j records previous value. Also handles wrapping around.
+        for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            inside ^= polygon[i].y > point.y !== polygon[j].y > point.y &&
+                point.x - polygon[i].x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y);
+        }
+        // Let's make js as magical as C. Yay.
+        return !!inside;
+    }
+
+    async showTooltip(pos: L.LatLng, fields: IITC.Field[]): Promise<void> {
+        // TODO: sort fields by size
+        let total = 0;
+        const text: string[] = fields.map(f => {
+
+            const mindunits = await this.getFieldMUSStored(f);
+            if (mindunits) {
+                total += mindunits;
+                return `${mindunits} MUs (stored)`;
+
+            } else {
+                return `? MUs`;
+            }
+        })
+
+        if (total > 0) text.push(`<hr><br>Total: ${total}`);
+
+        window.map.openPopup(text.join("<br>"), pos);
+    }
+
+
 
 }
 
