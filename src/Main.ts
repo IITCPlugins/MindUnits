@@ -1,17 +1,15 @@
 import * as Plugin from "iitcpluginkit";
 import { LatLngToXYZ, S2RegionCover, S2Triangle, XYZToLatLng } from "./s2";
 import { FieldLogger } from "./fieldLogger";
+import { MindunitsDB, S2MUDetailLevel, S2MULevel } from "./mindunitsDB";
 
 const TOOLTIP_DELAY = 1000;
-const S2MULevel = 10;
-const S2MUDetailLevel = 17;
-const S2MUDetailFactor = Math.pow(4, S2MUDetailLevel - S2MULevel);
-
 
 
 class LogFields implements Plugin.Class {
 
     private fieldLog: FieldLogger;
+    private muDB: MindunitsDB;
 
     private layer: L.LayerGroup<any>;
     private mustrings: Map<string, L.Marker> = new Map();
@@ -19,8 +17,6 @@ class LogFields implements Plugin.Class {
 
     private mouseDelayTimer: number | undefined;
     private popupActive: boolean;
-
-    private muDB: Map<string, number>;
 
     async init() {
 
@@ -38,8 +34,8 @@ class LogFields implements Plugin.Class {
 
         this.setupCss();
 
-        this.muDB = new Map();
-        this.train();
+        this.muDB = new MindunitsDB();
+        this.muDB.train(this.fieldLog);
     }
 
 
@@ -156,7 +152,7 @@ class LogFields implements Plugin.Class {
         let total = 0;
         const text: string[] = await Promise.all(fields.map(async f => {
 
-            const calcMU = this.calcMU(f.getLatLngs());
+            const calcMU = this.muDB.calcMU(f.getLatLngs());
             const calcMUStr = calcMU.missing ? ` >${calcMU.mindunits}` : calcMU.mindunits;
 
             const mindunits = await this.fieldLog.getFieldMUS(f);
@@ -216,65 +212,6 @@ class LogFields implements Plugin.Class {
             this.s2Cells = undefined;
         }
     }
-
-
-    train(): void {
-        console.time("logfield_train");
-        this.fieldLog.forEach((latlngs, mindunits) => this.trainField(latlngs, mindunits));
-        console.timeEnd("logfield_train");
-    }
-
-    trainField(ll: L.LatLng[], mindunits: number): void {
-        const cover = new S2RegionCover();
-        const region = new S2Triangle(LatLngToXYZ(ll[0]), LatLngToXYZ(ll[1]), LatLngToXYZ(ll[2]));
-
-        const cells = cover.getCovering(region, S2MULevel, S2MULevel);
-        const detailCells = cells.map(cell => cover.howManyIntersect(region, cell, S2MUDetailLevel));
-        const total = detailCells.reduce((sum, x) => sum + x, 0);
-
-        const mu_per_detail = mindunits / total;
-
-        cells.forEach((cell, index) => {
-            const id = cell.toString();
-            const mu = mu_per_detail * S2MUDetailFactor;
-
-            if (this.muDB.has(id)) {
-                const current = this.muDB.get(id)!;
-                if (current !== mu) {
-                    // console.log("MU diff:", current - mu, `${Math.round((1 - mu / current) * 1000) / 10}% `);
-                    this.muDB.set(id, (current + mu) / 2);
-                }
-            } else {
-                this.muDB.set(id, mu);
-            }
-        })
-    }
-
-
-    calcMU(ll: L.LatLng[]): { mindunits: number, missing: boolean } {
-        const cover = new S2RegionCover();
-        const region = new S2Triangle(LatLngToXYZ(ll[0]), LatLngToXYZ(ll[1]), LatLngToXYZ(ll[2]));
-
-        const cells = cover.getCovering(region, S2MULevel, S2MULevel);
-
-        let mindunits = 0;
-        let missing = false;
-        cells.forEach(cell => {
-            const id = cell.toString();
-            const details = cover.howManyIntersect(region, cell, S2MUDetailLevel);
-
-            const cellMU = this.muDB.get(id);
-            if (cellMU) {
-                mindunits += cellMU * details / S2MUDetailFactor;
-            } else {
-                missing = true;
-            }
-        });
-
-        mindunits = Math.ceil(mindunits);
-        return { mindunits, missing };
-    }
-
 }
 
 
