@@ -1,5 +1,6 @@
 import * as Plugin from "iitcpluginkit";
 import * as localForage from "localforage";
+import { LatLngToXYZ, S2RegionCover, S2Triangle, XYZToLatLng } from "./s2";
 
 const MINIMUM_MUS = 100;
 const TOOLTIP_DELAY = 1000;
@@ -15,14 +16,16 @@ class LogFields implements Plugin.Class {
     private store: LocalForage;
     private layer: L.LayerGroup<any>;
     private mustrings: Map<string, L.Marker> = new Map();
+    private s2Cells: L.LayerGroup<any> | undefined;
 
     private mouseDelayTimer: number | undefined;
+    private popupActive: boolean;
 
     async init() {
         window.addHook("publicChatDataAvailable", this.onChatData);
         window.addHook("fieldAdded", this.onFieldAdd);
         window.addHook("fieldRemoved", this.onFieldRemoved);
-        window.map.on("MouseMove", this.onMouseMove);
+        window.map.on("mousemove", this.onMouseMove);
 
         this.layer = new L.LayerGroup();
         window.addLayerGroup("MUs", this.layer, true);
@@ -339,6 +342,12 @@ class LogFields implements Plugin.Class {
     onMouseMove = (ev: L.LeafletMouseEvent) => {
         window.clearTimeout(this.mouseDelayTimer);
         this.mouseDelayTimer = window.setTimeout(() => this.checkForTooltip(ev), TOOLTIP_DELAY);
+
+        if (this.popupActive) {
+            window.map.closePopup();
+            this.popupActive = false;
+            this.clearS2Cells();
+        }
     }
 
 
@@ -357,7 +366,11 @@ class LogFields implements Plugin.Class {
         }
 
         if (fields.length > 0) {
+            this.showS2Cells(fields[0]);
             this.showTooltip(ev.latlng, fields);
+        } else {
+            window.map.closePopup();
+            this.clearS2Cells();
         }
     }
 
@@ -365,6 +378,7 @@ class LogFields implements Plugin.Class {
         var inside = 0;
         // j records previous value. Also handles wrapping around.
         for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            // @ts-ignore
             inside ^= polygon[i].y > point.y !== polygon[j].y > point.y &&
                 point.x - polygon[i].x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y);
         }
@@ -373,9 +387,12 @@ class LogFields implements Plugin.Class {
     }
 
     async showTooltip(pos: L.LatLng, fields: IITC.Field[]): Promise<void> {
-        // TODO: sort fields by size
+
+        fields = fields.sort((a, b) => this.triangleArea(b.getLatLngs()) - this.triangleArea(a.getLatLngs()));
+
+
         let total = 0;
-        const text: string[] = fields.map(f => {
+        const text: string[] = await Promise.all(fields.map(async f => {
 
             const mindunits = await this.getFieldMUSStored(f);
             if (mindunits) {
@@ -385,14 +402,52 @@ class LogFields implements Plugin.Class {
             } else {
                 return `? MUs`;
             }
-        })
+        }))
 
         if (total > 0) text.push(`<hr><br>Total: ${total}`);
 
         window.map.openPopup(text.join("<br>"), pos);
+        this.popupActive = true;
+    }
+
+    private triangleArea(p: L.LatLng[]): number {
+        return Math.abs(0.5 * (
+            (p[1].lat - p[0].lat) * (p[2].lng - p[0].lng)
+            - (p[2].lat - p[0].lat) * (p[1].lng - p[0].lng)));
     }
 
 
+    showS2Cells(field: IITC.Field): void {
+        this.clearS2Cells();
+
+        const ll = field.getLatLngs();
+
+        const cover = new S2RegionCover();
+        const region = new S2Triangle(LatLngToXYZ(ll[0]), LatLngToXYZ(ll[1]), LatLngToXYZ(ll[2]));
+        const cells = cover.getCovering(region, 17);
+
+        if (cells.length === 0) {
+            console.error("no S2 Cells for field?!?")
+            return;
+        }
+
+        const theCells = cells.map(s2 => {
+            const corners = s2.getCornerXYZ();
+            const cornersLL = corners.map(c => XYZToLatLng(c));
+
+            return new L.GeodesicPolyline(cornersLL, {});
+        })
+
+        this.s2Cells = new L.LayerGroup(theCells);
+        window.map.addLayer(this.s2Cells);
+    }
+
+    clearS2Cells(): void {
+        if (this.s2Cells) {
+            window.map.removeLayer(this.s2Cells);
+            this.s2Cells = undefined;
+        }
+    }
 
 }
 
