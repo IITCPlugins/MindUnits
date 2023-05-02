@@ -7,7 +7,12 @@ const S2MUDetailFactor = Math.pow(4, S2MUDetailLevel - S2MULevel);
 
 
 export class MindunitsDB {
+
     private muDB: Map<string, number>;
+
+    constructor() {
+        this.muDB = new Map();
+    }
 
 
     train(fieldLog: FieldLogger): void {
