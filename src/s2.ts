@@ -414,7 +414,7 @@ export class S2Cell {
     private uvBound: [UV, UV];
 
     //static method to construct
-    static FromLatLng(latLng: LatLng, level: Level) {
+    static FromLatLng(latLng: LatLng, level: Level): S2Cell {
         const xyz = LatLngToXYZ(latLng);
 
         const faceuv = XYZToFaceUV(xyz);
@@ -425,7 +425,7 @@ export class S2Cell {
         return S2Cell.FromFaceIJ(faceuv[0], ij, level);
     }
 
-    static FromFaceIJ(face: Face, ij: IJ, level: Level) {
+    static FromFaceIJ(face: Face, ij: IJ, level: Level): S2Cell {
         const cell = new S2Cell();
         cell.face = face;
         cell.ij = ij;
@@ -438,18 +438,20 @@ export class S2Cell {
         return cell;
     }
 
-    toString() {
-        return (
-            'F' +
-            this.face +
-            'ij[' +
-            this.ij[0] +
-            ',' +
-            this.ij[1] +
-            ']@' +
-            this.level
-        );
+    static fromString(code: string): S2Cell {
+        const m = code.match(/(?<face>\d+)\[(?<i>\d+),(?<j>\d+)\](?<level>\d+)/);
+        if (!m || !m.groups) {
+            throw new Error(`Invalid cell code: ${code}`);
+        }
+
+        const g = m.groups;
+        return S2Cell.FromFaceIJ(Number(g.face), [Number(g.i), Number(g.j)], Number(g.level));
     }
+
+    toString() {
+        return `${this.face}[${this.ij[0]},${this.ij[1]}]${this.level}`;
+    }
+
 
     contains(xyz: XYZ) {
         const [face, uv] = XYZToFaceUV(xyz);

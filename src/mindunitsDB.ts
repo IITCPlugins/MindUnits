@@ -73,4 +73,11 @@ export class MindunitsDB {
         return { mindunits, missing };
     }
 
+
+    forEach(callback: (cell: S2.S2Cell, mindunits: number) => void): void {
+        this.muDB.forEach((mindunits, guid) => {
+            const cell = S2.S2Cell.fromString(guid);
+            callback(cell, mindunits);
+        })
+    }
 }    

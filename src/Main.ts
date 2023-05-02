@@ -1,5 +1,5 @@
 import * as Plugin from "iitcpluginkit";
-import { LatLngToXYZ, S2RegionCover, S2Triangle, XYZToLatLng } from "./s2";
+import * as S2 from "./s2";
 import { FieldLogger } from "./fieldLogger";
 import { MindunitsDB, S2MUDetailLevel, S2MULevel } from "./mindunitsDB";
 
@@ -185,8 +185,8 @@ class LogFields implements Plugin.Class {
 
         const ll = field.getLatLngs();
 
-        const cover = new S2RegionCover();
-        const region = new S2Triangle(LatLngToXYZ(ll[0]), LatLngToXYZ(ll[1]), LatLngToXYZ(ll[2]));
+        const cover = new S2.S2RegionCover();
+        const region = new S2.S2Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
         const cells = cover.getCovering(region, S2MULevel, S2MUDetailLevel);
 
         if (cells.length === 0) {
@@ -196,7 +196,7 @@ class LogFields implements Plugin.Class {
 
         const theCells = cells.map(s2 => {
             const corners = s2.getCornerXYZ();
-            const cornersLL = corners.map(c => XYZToLatLng(c));
+            const cornersLL = corners.map(c => S2.XYZToLatLng(c));
             cornersLL.push(cornersLL[0]);
 
             return new L.GeodesicPolyline(cornersLL, {});
@@ -211,6 +211,31 @@ class LogFields implements Plugin.Class {
             window.map.removeLayer(this.s2Cells);
             this.s2Cells = undefined;
         }
+    }
+
+
+    showMUDBCells(): void {
+        const base = new L.LayerGroup();
+        this.muDB.forEach((cell, mindunits) => {
+            const corners = cell.getCornerXYZ();
+            const cornersLL = corners.map(c => S2.XYZToLatLng(c));
+            cornersLL.push(cornersLL[0]);
+
+            base.addLayer(new L.GeodesicPolyline(cornersLL, { color: "#C6EC4B" }));
+
+            const center = L.latLng((cornersLL[0].lat + cornersLL[2].lat) / 2, (cornersLL[0].lng + cornersLL[2].lng) / 2);
+            const marker = L.marker(center, {
+                icon: L.divIcon({
+                    iconSize: [48, 12],
+                    html: Math.ceil(mindunits).toString()
+                }),
+                interactive: false
+            });
+            base.addLayer(marker);
+
+        })
+
+        window.map.addLayer(base);
     }
 }
 
