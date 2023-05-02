@@ -4,6 +4,9 @@ import { LatLngToXYZ, S2RegionCover, S2Triangle, XYZToLatLng } from "./s2";
 
 const MINIMUM_MUS = 100;
 const TOOLTIP_DELAY = 1000;
+const S2MULevel = 10;
+const S2MUDetailLevel = 17;
+const S2MUDetailFactor = Math.pow(4, S2MUDetailLevel - S2MULevel);
 
 type Position = [number, number];
 interface StoredField {
@@ -20,6 +23,8 @@ class LogFields implements Plugin.Class {
 
     private mouseDelayTimer: number | undefined;
     private popupActive: boolean;
+
+    private muDB: Map<string, number>;
 
     async init() {
         window.addHook("publicChatDataAvailable", this.onChatData);
@@ -39,6 +44,9 @@ class LogFields implements Plugin.Class {
         console.log("LogField: stored fields:", length);
 
         this.setupCss();
+
+        this.muDB = new Map();
+        this.train();
     }
 
 
@@ -129,7 +137,21 @@ class LogFields implements Plugin.Class {
     private pos2guid(pos_in: Position[]): string {
         const pos = this.posOrder(pos_in);
         const all = [...pos[0], ...pos[1], ...pos[2]];
-        return all.map(v => (v < 0 ? "" : "+") + v.toString()).join();
+        return all.map(v => v.toString()).join(",");
+    }
+
+    private guid2pos(guid: string): Position[] {
+        const params = guid.split(",");
+        if (params.length !== 6) {
+            console.error("wrong guid:", guid);
+            return [];
+        }
+
+        return [
+            [Number(params[0]), Number(params[1])],
+            [Number(params[2]), Number(params[3])],
+            [Number(params[4]), Number(params[5])]
+        ];
     }
 
     private posOrder(pos: Position[]): Position[] {
@@ -366,7 +388,7 @@ class LogFields implements Plugin.Class {
         }
 
         if (fields.length > 0) {
-            this.showS2Cells(fields[0]);
+            // this.showS2Cells(fields[0]);
             this.showTooltip(ev.latlng, fields);
         } else {
             window.map.closePopup();
@@ -376,13 +398,11 @@ class LogFields implements Plugin.Class {
 
     pnpoly(polygon: L.Point[], point: L.Point) {
         var inside = 0;
-        // j records previous value. Also handles wrapping around.
         for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
             // @ts-ignore
             inside ^= polygon[i].y > point.y !== polygon[j].y > point.y &&
                 point.x - polygon[i].x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y);
         }
-        // Let's make js as magical as C. Yay.
         return !!inside;
     }
 
@@ -394,13 +414,17 @@ class LogFields implements Plugin.Class {
         let total = 0;
         const text: string[] = await Promise.all(fields.map(async f => {
 
+            const calcMU = this.calcMU(f.getLatLngs());
+            const calcMUStr = calcMU.missing ? ` >${calcMU.mindunits}` : calcMU.mindunits;
+
             const mindunits = await this.getFieldMUSStored(f);
             if (mindunits) {
                 total += mindunits;
-                return `${mindunits} MUs (stored)`;
+                return `${mindunits} Mus (~${calcMUStr})`;
 
             } else {
-                return `? MUs`;
+                total += calcMU.mindunits;
+                return `~${calcMUStr} Mus`;
             }
         }))
 
@@ -409,6 +433,7 @@ class LogFields implements Plugin.Class {
         window.map.openPopup(text.join("<br>"), pos);
         this.popupActive = true;
     }
+
 
     private triangleArea(p: L.LatLng[]): number {
         return Math.abs(0.5 * (
@@ -424,7 +449,7 @@ class LogFields implements Plugin.Class {
 
         const cover = new S2RegionCover();
         const region = new S2Triangle(LatLngToXYZ(ll[0]), LatLngToXYZ(ll[1]), LatLngToXYZ(ll[2]));
-        const cells = cover.getCovering(region, 17);
+        const cells = cover.getCovering(region, S2MULevel, S2MUDetailLevel);
 
         if (cells.length === 0) {
             console.error("no S2 Cells for field?!?")
@@ -434,6 +459,7 @@ class LogFields implements Plugin.Class {
         const theCells = cells.map(s2 => {
             const corners = s2.getCornerXYZ();
             const cornersLL = corners.map(c => XYZToLatLng(c));
+            cornersLL.push(cornersLL[0]);
 
             return new L.GeodesicPolyline(cornersLL, {});
         })
@@ -449,7 +475,76 @@ class LogFields implements Plugin.Class {
         }
     }
 
+
+    train(): void {
+        console.time("logfield_train");
+        this.store.iterate((data: StoredField, guid) => {
+
+            const positions = this.guid2pos(guid);
+            const latlngs = positions.map(p => L.latLng(p[0] * 1e-6, p[1] * 1e-6));
+            if (latlngs.length !== 3) return;
+
+            this.trainField(latlngs, data.mus);
+        });
+        console.timeEnd("logfield_train");
+    }
+
+    trainField(ll: L.LatLng[], mindunits: number): void {
+        const cover = new S2RegionCover();
+        const region = new S2Triangle(LatLngToXYZ(ll[0]), LatLngToXYZ(ll[1]), LatLngToXYZ(ll[2]));
+
+        const cells = cover.getCovering(region, S2MULevel, S2MULevel);
+        const detailCells = cells.map(cell => cover.howManyIntersect(region, cell, S2MUDetailLevel));
+        const total = detailCells.reduce((sum, x) => sum + x, 0);
+
+        const mu_per_detail = mindunits / total;
+
+        cells.forEach((cell, index) => {
+            const id = cell.toString();
+            const mu = mu_per_detail * S2MUDetailFactor;
+
+            if (this.muDB.has(id)) {
+                const current = this.muDB.get(id)!;
+                if (current !== mu) {
+                    // console.log("MU diff:", current - mu, `${Math.round((1 - mu / current) * 1000) / 10}% `);
+                    this.muDB.set(id, (current + mu) / 2);
+                }
+            } else {
+                this.muDB.set(id, mu);
+            }
+        })
+    }
+
+
+    calcMU(ll: L.LatLng[]): { mindunits: number, missing: boolean } {
+        const cover = new S2RegionCover();
+        const region = new S2Triangle(LatLngToXYZ(ll[0]), LatLngToXYZ(ll[1]), LatLngToXYZ(ll[2]));
+
+        const cells = cover.getCovering(region, S2MULevel, S2MULevel);
+
+        let mindunits = 0;
+        let missing = false;
+        cells.forEach(cell => {
+            const id = cell.toString();
+            const details = cover.howManyIntersect(region, cell, S2MUDetailLevel);
+
+            const cellMU = this.muDB.get(id);
+            if (cellMU) {
+                mindunits += cellMU * details / S2MUDetailFactor;
+            } else {
+                missing = true;
+            }
+        });
+
+        mindunits = Math.ceil(mindunits);
+        return { mindunits, missing };
+    }
+
 }
+
+
+
+
 
 
 Plugin.Register(new LogFields(), "LogFields");
