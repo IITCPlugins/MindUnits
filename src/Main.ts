@@ -221,7 +221,7 @@ class LogFields implements Plugin.Class {
             const cornersLL = corners.map(c => S2.XYZToLatLng(c));
             cornersLL.push(cornersLL[0]);
 
-            base.addLayer(new L.GeodesicPolyline(cornersLL, { color: "#C6EC4B" }));
+            base.addLayer(new L.GeodesicPolyline(cornersLL, { color: "#CCCC00" }));
 
             const center = L.latLng((cornersLL[0].lat + cornersLL[2].lat) / 2, (cornersLL[0].lng + cornersLL[2].lng) / 2);
             const marker = L.marker(center, {
