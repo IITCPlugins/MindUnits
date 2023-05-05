@@ -1,5 +1,5 @@
 import * as Plugin from "iitcpluginkit";
-import * as S2 from "./s2";
+import * as S2 from "./lib/s2";
 import { FieldLogger } from "./fieldLogger";
 import { MindunitsDB, S2MUDetailLevel, S2MULevel } from "./mindunitsDB";
 
