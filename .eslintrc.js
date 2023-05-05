@@ -53,6 +53,7 @@ module.exports = {
         "@typescript-eslint/prefer-for-of": "error",
         "@typescript-eslint/prefer-function-type": "error",
         "@typescript-eslint/quotes": ["error", "double", { "avoidEscape": true }],
+        "@typescript-eslint/require-array-sort-compare": ["error", { "ignoreStringArrays": true }],
         "@typescript-eslint/unified-signatures": "error",
         "@typescript-eslint/unbound-method": ["warn", { "ignoreStatic": true }],
         "arrow-parens": ["error", "as-needed"],
