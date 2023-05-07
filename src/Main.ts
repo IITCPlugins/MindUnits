@@ -125,8 +125,17 @@ class LogFields implements Plugin.Class {
             }
         }
 
+        const dt = window.plugin.drawTools && window.plugin.drawTools.drawnItems;
+        if (dt) {
+            window.plugin.drawTools.drawnItems.eachLayer((layer: L.ILayer) => {
+                if (layer instanceof L.GeodesicPolygon || layer instanceof L.Polygon) {
+                    const latlngs = layer.getLatLngs();
+
+                }
+            })
+        }
+
         if (fields.length > 0) {
-            // this.showS2Cells(fields[0]);
             this.showTooltip(ev.latlng, fields);
         } else {
             window.map.closePopup();
