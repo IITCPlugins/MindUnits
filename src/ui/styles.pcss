@@ -1,0 +1,42 @@
+.plugin-logfields-numbers {
+  font-size: 12px;
+  color: #121230;
+  font-family: monospace;
+  text-align: center;
+  pointer-events: none;
+}
+
+.plugin-logfields-icon a {
+  background-image: url(./images/icon.png);
+  background-size: 24px;
+}
+
+.plugin-logfields-icon.active a {
+  background-color: #bbb;
+}
+
+.logfield-tooltip {
+  background: rgb(54, 54, 54);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #fff;
+  font: 12px/18px "Helvetica Neue", Arial, Helvetica, sans-serif;
+  margin-left: 20px;
+  margin-top: -21px;
+  padding: 4px 8px;
+  position: absolute;
+  white-space: nowrap;
+  z-index: 700;
+
+  &:before {
+    border-right: 6px solid black;
+    border-right-color: rgba(0, 0, 0, 0.5);
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    content: "";
+    position: absolute;
+    top: 7px;
+    left: -7px;
+  }
+}
