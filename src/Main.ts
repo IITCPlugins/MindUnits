@@ -300,11 +300,6 @@ class LogFields implements Plugin.Class {
 
         window.map.addLayer(base);
     }
-}
-
-
-
-
 
     toggleTracking(): void {
         if (this.trackingActive) this.disableTracking();
@@ -353,9 +348,6 @@ class LogFields implements Plugin.Class {
             this.clearS2Cells();
         }
     }
-
-
-
-
+}
 
 Plugin.Register(new LogFields(), "LogFields");
