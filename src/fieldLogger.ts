@@ -294,5 +294,7 @@ export class FieldLogger {
     }
 
 
-
+    async getFieldCount(): Promise<number> {
+        return await this.store.length();
+    }
 }

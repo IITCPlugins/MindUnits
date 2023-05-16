@@ -136,4 +136,9 @@ export class MindunitsDB {
             callback(cell, mindunits);
         })
     }
+
+
+    getNumberOfCells(): number {
+        return this.muDB.size;
+    }
 }    
