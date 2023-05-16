@@ -40,7 +40,6 @@ class LogFields implements Plugin.Class {
         this.muDB = new MindunitsDB();
         this.muDB.train(this.fieldLog);
 
-
         const toolbarGroup = $("<div>", { class: "leaflet-bar leaflet-control plugin-logfields-icon", id: "logfieldbutton"})
             .append(
                 $("<a>", { class: "leaflet-bar-part" })
@@ -51,8 +50,6 @@ class LogFields implements Plugin.Class {
         const parent = $(".leaflet-top.leaflet-left", window.map.getContainer()).first();
         parent.append(toolbarGroup);
     }
-
-
 
     onFieldAdd = async (fieldEvent: EventFieldAdded): Promise<void> => {
         const mindunits = await this.fieldLog.getFieldMUS(fieldEvent.field);
@@ -185,7 +182,6 @@ class LogFields implements Plugin.Class {
         this.showTooltip(pos, text.join("<br>"));
     }
 
-
     private async getFieldMUText(field: IITC.Field): Promise<{ text: string, mindunits: number }> {
 
 
@@ -301,6 +297,10 @@ class LogFields implements Plugin.Class {
         window.map.addLayer(base);
     }
 
+  
+    train(): void {
+        this.muDB.train(this.fieldLog);
+    }
     toggleTracking(): void {
         if (this.trackingActive) this.disableTracking();
         else this.enableTracking();
