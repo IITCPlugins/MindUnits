@@ -4,6 +4,7 @@ import { FieldLogger } from "./fieldLogger";
 import { MindunitsDB, S2MUDetailLevel, S2MULevel } from "./mindunitsDB";
 import { DebugDialog } from "./ui/debugDialog";
 import myicon from "./ui/images/icon.svg";
+import { createSignal } from "solid-js";
 
 
 const TOOLTIP_DELAY = 100;
@@ -22,6 +23,9 @@ class LogFields implements Plugin.Class {
     private trackingActive: boolean;
     private mouseDelayTimer: number | undefined;
     private tooltip: JQuery | undefined;
+
+    public areTrainCellsVisible: () => boolean;
+    private setTrainCellsVisible: (show: boolean) => void;
 
 
     async init() {
@@ -54,10 +58,30 @@ class LogFields implements Plugin.Class {
 
         const parent = $(".leaflet-top.leaflet-left", window.map.getContainer()).first();
         parent.append(toolbarGroup);
+
+        [this.areTrainCellsVisible, this.setTrainCellsVisible] = createSignal<boolean>(false);
     }
 
     async getStatLogFieldCount(): Promise<number> {
         return await this.fieldLog.getFieldCount();
+    }
+
+    async getMUError(): Promise<number> {
+        let error = 0;
+        let count = 0;
+        await this.fieldLog.forEach((ll, mindunits) => {
+            const calc = this.muDB.calcMU(ll);
+            const diff = Math.abs(calc.mindunits / mindunits - 1);
+            error += diff;
+            count++;
+            if (diff > 0.6) {
+                console.log("Calc error:", ll, calc, mindunits)
+            }
+        })
+
+        if (count === 0) return 100;
+
+        return Math.ceil((error / count) * 10000) / 100;
     }
 
     getCellCount(): number {
@@ -310,12 +334,14 @@ class LogFields implements Plugin.Class {
         })
 
         window.map.addLayer(this.allCellsLayer);
+        this.setTrainCellsVisible(true);
     }
 
     hideMUDBCells(): void {
         if (this.allCellsLayer) {
             window.map.removeLayer(this.allCellsLayer);
             this.allCellsLayer = undefined;
+            this.setTrainCellsVisible(false);
         }
     }
 

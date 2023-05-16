@@ -35,9 +35,21 @@ export class FieldLogger {
         return;
     }
 
-
-    forEach(callback: (ll: L.LatLng[], mindunits: number) => void): void {
+    repair(): void {
         this.store.iterate((data: StoredField, guid) => {
+
+            const positions = this.guid2pos(guid);
+            const latlngs = positions.map(p => L.latLng(p[0] * 1e-6, p[1] * 1e-6));
+            if (latlngs.length !== 3) {
+                this.store.removeItem(guid);
+            }
+        });
+
+    }
+
+
+    forEach(callback: (ll: L.LatLng[], mindunits: number) => void): Promise<void> {
+        return this.store.iterate((data: StoredField, guid) => {
 
             const positions = this.guid2pos(guid);
             const latlngs = positions.map(p => L.latLng(p[0] * 1e-6, p[1] * 1e-6));
