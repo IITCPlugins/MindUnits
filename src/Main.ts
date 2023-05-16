@@ -74,9 +74,6 @@ class LogFields implements Plugin.Class {
             const diff = Math.abs(calc.mindunits / mindunits - 1);
             error += diff;
             count++;
-            if (diff > 0.6) {
-                console.log("Calc error:", ll, calc, mindunits)
-            }
         })
 
         if (count === 0) return 100;
