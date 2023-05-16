@@ -40,12 +40,12 @@ class LogFields implements Plugin.Class {
         this.muDB = new MindunitsDB();
         this.muDB.train(this.fieldLog);
 
-        const toolbarGroup = $("<div>", { class: "leaflet-bar leaflet-control plugin-logfields-icon", id: "logfieldbutton"})
+        const toolbarGroup = $("<div>", { class: "leaflet-bar leaflet-control plugin-logfields-icon", id: "logfieldbutton" })
             .append(
                 $("<a>", { class: "leaflet-bar-part" })
                     .css("background-image", myicon)
                     .on("click", (() => this.toggleTracking())
-                ));
+                    ));
 
         const parent = $(".leaflet-top.leaflet-left", window.map.getContainer()).first();
         parent.append(toolbarGroup);
@@ -176,7 +176,7 @@ class LogFields implements Plugin.Class {
             text.push(`${sep}DrawTools = ${window.digits(dttotal)} Mu`);
         }
         if (total > 0 && dttotal > 0) {
-            text.push(`Total ${window.digits(total+dttotal)} Mu`);
+            text.push(`Total ${window.digits(total + dttotal)} Mu`);
         }
 
         this.showTooltip(pos, text.join("<br>"));
@@ -297,7 +297,7 @@ class LogFields implements Plugin.Class {
         window.map.addLayer(base);
     }
 
-  
+
     train(): void {
         this.muDB.train(this.fieldLog);
     }
@@ -328,7 +328,7 @@ class LogFields implements Plugin.Class {
 
     showTooltip(latlng: L.LatLng, text: string): void {
         if (!this.tooltip) {
-            this.tooltip = $("<div>", {class: "logfield-tooltip"});
+            this.tooltip = $("<div>", { class: "logfield-tooltip" });
             const pane = window.map.getPanes()["popupPane"]; // FIXME <- does this work in leaflet 0.77???
             this.tooltip.appendTo(pane);
         }
@@ -338,7 +338,7 @@ class LogFields implements Plugin.Class {
         const point = window.map.latLngToLayerPoint(latlng);
         // this.tooltip.css( { left: point.x+12, top: point.y } )
         // this.tooltip.offset({left: point.x+12, top: point.y});
-        L.DomUtil.setPosition(this.tooltip[0], point.add(L.point(12,0)));
+        L.DomUtil.setPosition(this.tooltip[0], point.add(L.point(12, 0)));
     }
 
     hideTooltip(): void {
