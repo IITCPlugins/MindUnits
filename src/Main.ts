@@ -2,7 +2,9 @@ import * as Plugin from "iitcpluginkit";
 import * as S2 from "./lib/s2";
 import { FieldLogger } from "./fieldLogger";
 import { MindunitsDB, S2MUDetailLevel, S2MULevel } from "./mindunitsDB";
+import { DebugDialog } from "./ui/debugDialog";
 import myicon from "./ui/images/icon.svg";
+import { createSignal } from "solid-js";
 
 
 const TOOLTIP_DELAY = 100;
@@ -16,10 +18,14 @@ class LogFields implements Plugin.Class {
     private layer: L.LayerGroup<any>;
     private mustrings: Map<string, L.Marker> = new Map();
     private s2Cells: L.LayerGroup<any> | undefined;
+    private allCellsLayer: L.LayerGroup<any> | undefined;
 
     private trackingActive: boolean;
     private mouseDelayTimer: number | undefined;
     private tooltip: JQuery | undefined;
+
+    public areTrainCellsVisible: () => boolean;
+    private setTrainCellsVisible: (show: boolean) => void;
 
 
     async init() {
@@ -38,7 +44,10 @@ class LogFields implements Plugin.Class {
         window.addLayerGroup("MUs", this.layer, true);
 
         this.muDB = new MindunitsDB();
-        this.muDB.train(this.fieldLog);
+        this.train();
+
+
+        $("#toolbox").append($("<a>", { text: "LogField", click: () => new DebugDialog().show() }));
 
         const toolbarGroup = $("<div>", { class: "leaflet-bar leaflet-control plugin-logfields-icon", id: "logfieldbutton" })
             .append(
@@ -49,6 +58,31 @@ class LogFields implements Plugin.Class {
 
         const parent = $(".leaflet-top.leaflet-left", window.map.getContainer()).first();
         parent.append(toolbarGroup);
+
+        [this.areTrainCellsVisible, this.setTrainCellsVisible] = createSignal<boolean>(false);
+    }
+
+    async getStatLogFieldCount(): Promise<number> {
+        return await this.fieldLog.getFieldCount();
+    }
+
+    async getMUError(): Promise<number> {
+        let error = 0;
+        let count = 0;
+        await this.fieldLog.forEach((ll, mindunits) => {
+            const calc = this.muDB.calcMU(ll);
+            const diff = Math.abs(calc.mindunits / mindunits - 1);
+            error += diff;
+            count++;
+        })
+
+        if (count === 0) return 100;
+
+        return Math.ceil((error / count) * 10000) / 100;
+    }
+
+    getCellCount(): number {
+        return this.muDB.getNumberOfCells();
     }
 
     onFieldAdd = async (fieldEvent: EventFieldAdded): Promise<void> => {
@@ -274,13 +308,15 @@ class LogFields implements Plugin.Class {
 
 
     showMUDBCells(): void {
-        const base = new L.LayerGroup();
+        this.hideMUDBCells();
+
+        this.allCellsLayer = new L.LayerGroup();
         this.muDB.forEach((cell, mindunits) => {
             const corners = cell.getCornerXYZ();
             const cornersLL = corners.map(c => S2.XYZToLatLng(c));
             cornersLL.push(cornersLL[0]);
 
-            base.addLayer(new L.GeodesicPolyline(cornersLL, { color: "#CCCC00" }));
+            this.allCellsLayer!.addLayer(new L.GeodesicPolyline(cornersLL, { color: "#CCCC00" }));
 
             const center = L.latLng((cornersLL[0].lat + cornersLL[2].lat) / 2, (cornersLL[0].lng + cornersLL[2].lng) / 2);
             const marker = L.marker(center, {
@@ -290,17 +326,27 @@ class LogFields implements Plugin.Class {
                 }),
                 interactive: false
             });
-            base.addLayer(marker);
+            this.allCellsLayer!.addLayer(marker);
 
         })
 
-        window.map.addLayer(base);
+        window.map.addLayer(this.allCellsLayer);
+        this.setTrainCellsVisible(true);
     }
 
+    hideMUDBCells(): void {
+        if (this.allCellsLayer) {
+            window.map.removeLayer(this.allCellsLayer);
+            this.allCellsLayer = undefined;
+            this.setTrainCellsVisible(false);
+        }
+    }
 
     train(): void {
+        // this.fieldLog.repair();
         this.muDB.train(this.fieldLog);
     }
+
     toggleTracking(): void {
         if (this.trackingActive) this.disableTracking();
         else this.enableTracking();
@@ -350,4 +396,6 @@ class LogFields implements Plugin.Class {
     }
 }
 
-Plugin.Register(new LogFields(), "LogFields");
+
+export const main = new LogFields();
+Plugin.Register(main, "LogFields");

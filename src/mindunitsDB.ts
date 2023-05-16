@@ -17,9 +17,9 @@ export class MindunitsDB {
     }
 
 
-    train(fieldLog: FieldLogger): void {
+    async train(fieldLog: FieldLogger): Promise<void> {
         console.time("logfield_train");
-        fieldLog.forEach((latlngs, mindunits) => this.trainField(latlngs, mindunits));
+        await fieldLog.forEach((latlngs, mindunits) => this.trainField(latlngs, mindunits));
         console.timeEnd("logfield_train");
 
         console.time("logfield_train_approx");
@@ -38,7 +38,7 @@ export class MindunitsDB {
 
         const mu_per_detail = mindunits / total;
 
-        cells.forEach((cell, index) => {
+        cells.forEach(cell => {
             const id = cell.toString();
             const mu = mu_per_detail * S2MUDetailFactor;
 
@@ -59,8 +59,10 @@ export class MindunitsDB {
         // lets build approximate values for missing cell
         if (fields.size === 0) return;
 
-        const firstCellID = fields.keys().next().value();
+        const first = fields.keys().next();
+        const firstCellID = first.value;
         const cell = S2.S2Cell.fromString(firstCellID);
+
         if (cell.level === 1) return;
 
 
@@ -111,7 +113,9 @@ export class MindunitsDB {
                 mindunits += cellMU * details / S2MUDetailFactor;
             } else {
                 const parentUnits = this.findParentUnits(cell);
-                mindunits += parentUnits * details / S2MUDetailFactor;
+                if (parentUnits) {
+                    mindunits += parentUnits * details / S2MUDetailFactor;
+                }
                 missing = true;
             }
         });
@@ -120,13 +124,14 @@ export class MindunitsDB {
         return { mindunits, missing };
     }
 
-    private findParentUnits(cell: S2.S2Cell): number {
-        const parent = cell.getParent()!;
+    private findParentUnits(cell: S2.S2Cell): number | undefined {
+        const parent = cell.getParent();
+        if (!parent) return undefined;
         let parentUnits = this.muDBParents.get(parent.toString());
 
         if (!parentUnits) parentUnits = this.findParentUnits(parent);
 
-        return parentUnits / 4;
+        return parentUnits && (parentUnits / 4);
     }
 
 
@@ -135,5 +140,10 @@ export class MindunitsDB {
             const cell = S2.S2Cell.fromString(guid);
             callback(cell, mindunits);
         })
+    }
+
+
+    getNumberOfCells(): number {
+        return this.muDB.size;
     }
 }    

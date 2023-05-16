@@ -1,9 +1,12 @@
 {
   "compilerOptions": {
-    "module": "ES6",
-    "target": "ES2017",
+    "module": "es6",
+    "target": "es6",
     "outDir": "dist/",
     "moduleResolution": "node",
+    "allowJs": false, 
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
     "typeRoots": [
       "node_modules/@types",
       "types"
@@ -26,5 +29,10 @@
   "include": [
     "types/*.d.ts",
     "./src/**/*.ts"
-  ]
+  ],
+  "ts-node": {
+    "compilerOptions": {
+      "module": "CommonJS"
+    }
+  }  
 }
