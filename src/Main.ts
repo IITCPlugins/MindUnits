@@ -1,10 +1,11 @@
 import * as Plugin from "iitcpluginkit";
 import * as S2 from "./lib/s2";
 import { FieldLogger } from "./fieldLogger";
-import { MindunitsDB, S2MUDetailLevel, S2MULevel } from "./mindunitsDB";
+import { MindunitsDB, Result as MUResult, S2MUDetailLevel, S2MULevel } from "./mindunitsDB";
 import { DebugDialog } from "./ui/debugDialog";
 import myicon from "./ui/images/icon.svg";
 import { createSignal } from "solid-js";
+import { CSVExport } from "./lib/CSVExport";
 
 
 const TOOLTIP_DELAY = 100;
@@ -41,7 +42,7 @@ class LogFields implements Plugin.Class {
         window.addHook("fieldRemoved", this.onFieldRemoved);
 
         this.layer = new L.LayerGroup();
-        window.addLayerGroup("MUs", this.layer, true);
+        window.addLayerGroup("Field MUs", this.layer, false);
 
         this.muDB = new MindunitsDB();
         this.train();
@@ -64,21 +65,6 @@ class LogFields implements Plugin.Class {
 
     async getStatLogFieldCount(): Promise<number> {
         return await this.fieldLog.getFieldCount();
-    }
-
-    async getMUError(): Promise<number> {
-        let error = 0;
-        let count = 0;
-        await this.fieldLog.forEach((ll, mindunits) => {
-            const calc = this.muDB.calcMU(ll);
-            const diff = Math.abs(calc.mindunits / mindunits - 1);
-            error += diff;
-            count++;
-        })
-
-        if (count === 0) return 100;
-
-        return Math.ceil((error / count) * 10000) / 100;
     }
 
     getCellCount(): number {
@@ -220,19 +206,19 @@ class LogFields implements Plugin.Class {
 
 
         const calcMU = this.muDB.calcMU(field.getLatLngs());
-        const calcMUStr = (calcMU.missing ? " >" : "") + window.digits(calcMU.mindunits);
+        const calcMUStr = this.resultToString(calcMU);
 
         const mindunits = await this.fieldLog.getFieldMUS(field);
         if (mindunits) {
             return {
                 // known field
-                text: `${window.digits(mindunits)} Mus (~${calcMUStr})`,
+                text: `${window.digits(mindunits)} Mus (${calcMUStr})`,
                 mindunits: mindunits
             }
         } else {
             return {
                 // only calculated
-                text: `~${calcMUStr} Mus`,
+                text: calcMUStr,
                 mindunits: calcMU.mindunits
             }
         }
@@ -243,26 +229,43 @@ class LogFields implements Plugin.Class {
 
         // TODO: add S2 Polygon Region
 
-        let total = 0;
-        let missing = false;
+        let total: MUResult = {
+            mindunits: 0,
+            cells: 0,
+            missing: 0,
+            approx: 0,
+        };
 
         const ll = polygon.getLatLngs();
         for (let i = 2; i < ll.length; i++) {
             const latLngs = [ll[0], ll[i - 1], ll[i]];
 
             const calcMU = this.muDB.calcMU(latLngs);
-            total += calcMU.mindunits;
-            missing ||= calcMU.missing;
+            total.mindunits += calcMU.mindunits;
+            total.cells += calcMU.cells;
+            total.missing += calcMU.missing;
+            total.approx += calcMU.approx;
         }
-
-        const calcMUStr = (missing ? " >" : "") + window.digits(total);
 
         return {
-            // only calculated
-            text: `~${calcMUStr} Mus`,
-            mindunits: total
+            text: this.resultToString(total),
+            mindunits: total.mindunits
         }
+    }
 
+    private resultToString(result: MUResult): string {
+
+        const mu = window.digits(result.mindunits);
+
+        const error = (result.missing + result.approx) / result.cells;
+        const errStr = ((1 - error) * 100).toFixed();
+
+        if (result.missing !== 0 && result.approx !== 0) return `~ ?${mu} Mu (e=${errStr}%)`;
+        if (result.missing > 0 && result.approx === 0) return `~ >${mu} Mu`;
+        if (result.missing === 0 && result.approx > 0) return `~ ~${mu} Mu`;
+        if (result.missing + result.approx === result.cells) return `~ ? (${mu} Mu)`;
+
+        return `~${mu} Mu`;
     }
 
 
@@ -393,6 +396,62 @@ class LogFields implements Plugin.Class {
             this.tooltip = undefined;
             this.clearS2Cells();
         }
+    }
+
+    async exportError() {
+
+        const data: any[] = [];
+
+        await this.fieldLog.forEach((ll, mindunits) => {
+            const calc = this.muDB.calcMU(ll);
+            const diff = Math.abs(calc.mindunits - mindunits);
+
+            data.push({
+                mu: mindunits,
+                calculated: calc.mindunits,
+                cells: calc.cells,
+                missing: calc.missing,
+                approx: calc.approx,
+                difference: diff
+            })
+        })
+
+        const file = new CSVExport<any>(data, { name: "field_error" });
+        file.save();
+    }
+
+    async exportFields() {
+        const data: any[] = [];
+
+        await this.fieldLog.forEach((ll, mindunits) => {
+            data.push({
+                lat1: ll[0].lat,
+                lng1: ll[0].lng,
+                lat2: ll[1].lat,
+                lng2: ll[1].lng,
+                lat3: ll[2].lat,
+                lng3: ll[2].lng,
+                mindunits
+            })
+        })
+
+        const file = new CSVExport<any>(data, { name: "fields" });
+        file.save();
+    }
+
+    async getMUError(): Promise<number> {
+        let error = 0;
+        let count = 0;
+        await this.fieldLog.forEach((ll, mindunits) => {
+            const calc = this.muDB.calcMU(ll);
+            const diff = Math.abs(calc.mindunits - mindunits);
+            error += diff;
+            count++;
+        })
+
+        if (count === 0) return 100;
+
+        return Math.ceil(error / count);
     }
 }
 

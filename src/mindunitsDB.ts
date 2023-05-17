@@ -5,6 +5,12 @@ export const S2MULevel = 10;
 export const S2MUDetailLevel = 17;
 const S2MUDetailFactor = Math.pow(4, S2MUDetailLevel - S2MULevel);
 
+export interface Result {
+    mindunits: number;
+    cells: number;
+    missing: number;
+    approx: number;
+}
 
 export class MindunitsDB {
 
@@ -57,13 +63,16 @@ export class MindunitsDB {
 
     private calculateParents(fields: Map<string, number>): void {
         // lets build approximate values for missing cell
-        if (fields.size === 0) return;
+        if (fields.size === 0) {
+            console.error("no parent fields?");
+            return;
+        }
 
         const first = fields.keys().next();
         const firstCellID = first.value;
         const cell = S2.S2Cell.fromString(firstCellID);
 
-        if (cell.level === 1) return;
+        if (cell.level === 0) return;
 
 
         const parents = new Map<string, number[]>();
@@ -88,6 +97,10 @@ export class MindunitsDB {
 
             if (cell.level !== S2MULevel - 1 || munits.length !== 4) {
                 this.muDBParents.set(id, approx);
+
+                if (cell.level === 0) {
+                    console.log("Cell", id, approx);
+                }
             }
         });
 
@@ -96,32 +109,40 @@ export class MindunitsDB {
 
 
 
-    calcMU(ll: L.LatLng[]): { mindunits: number, missing: boolean } {
+    calcMU(ll: L.LatLng[]): Result {
         const cover = new S2.S2RegionCover();
         const region = new S2.S2Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
 
         const cells = cover.getCovering(region, S2MULevel, S2MULevel);
 
-        let mindunits = 0;
-        let missing = false;
+        const result = <Result>{
+            mindunits: 0,
+            cells: 0,
+            missing: 0,
+            approx: 0,
+        };
+
         cells.forEach(cell => {
             const id = cell.toString();
             const details = cover.howManyIntersect(region, cell, S2MUDetailLevel);
+            result.cells += details;
 
             const cellMU = this.muDB.get(id);
             if (cellMU) {
-                mindunits += cellMU * details / S2MUDetailFactor;
+                result.mindunits += cellMU * details / S2MUDetailFactor;
             } else {
                 const parentUnits = this.findParentUnits(cell);
                 if (parentUnits) {
-                    mindunits += parentUnits * details / S2MUDetailFactor;
+                    result.mindunits += parentUnits * details / S2MUDetailFactor;
+                    result.approx += details;
+                } else {
+                    result.missing += details;
                 }
-                missing = true;
             }
         });
 
-        mindunits = Math.ceil(mindunits);
-        return { mindunits, missing };
+        result.mindunits = Math.ceil(result.mindunits);
+        return result;
     }
 
     private findParentUnits(cell: S2.S2Cell): number | undefined {

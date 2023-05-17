@@ -12,7 +12,7 @@ const DBStatus = () => {
     return <div style="border: solid 1px yellow">
         Known Fields: {count()}<br />
         Trained Cells: {main.getCellCount()}<br />
-        Error: {MUerror()}
+        Avg.Error: {MUerror()}
     </div> as any;
 }
 
@@ -25,8 +25,11 @@ const DebugDialogContent = () => {
             fallback={<button onClick={() => main.hideMUDBCells()}>Hide trained cells</button>}
         >
             <button onClick={() => main.showMUDBCells()}>Show trained cells</button>;
-        </Show >
-        <button onClick={() => main.train()}>Train</button>;
+        </Show ><br/>
+        <button onClick={() => main.train()}>Train</button><br/>
+        <hr></hr>
+        <button onClick={() => main.exportError()}>Export ErrorList</button><br/>
+        <button onClick={() => main.exportFields()}>Export FieldList</button><br/>
     </>)
 }
 
@@ -35,7 +38,7 @@ export class DebugDialog {
     show(): void {
 
         const dialog = window.dialog({
-            title: "LogField Dialog",
+            title: "LogField Debug Dialog",
             html: "."
         })
 
