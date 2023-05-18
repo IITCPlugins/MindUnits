@@ -19,6 +19,9 @@
     "build:dev": "yarn ipk build:dev",
     "build:prod": "yarn ipk build:prod",
     "start": "yarn ipk fileserver",
-    "autobuild": "yarn ipk autobuild"
+    "autobuild": "yarn ipk autobuild",
+    "copy": "cross-env $ANDROID_SDK_ROOT/platform-tools/adb push dist/iitc_plugin_LogFields.dev.user.js /storage/emulated/0/IITC_Mobile/plugins/iitc_plugin_LogFields.dev.user.js",
+    "copy:win": "%ANDROID_SDK_ROOT%/platform-tools/adb push dist/iitc_plugin_LogFields.dev.user.js /storage/emulated/0/IITC_Mobile/plugins/iitc_plugin_LogFields.dev.user.js",
+    "copy:ps": "$env:ANDROID_SDK_ROOT/platform-tools/adb push dist/iitc_plugin_LogFields.dev.user.js /storage/emulated/0/IITC_Mobile/plugins/iitc_plugin_LogFields.dev.user.js"
   }
 }
