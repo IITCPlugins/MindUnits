@@ -72,7 +72,7 @@ export class MindunitsDB {
         const firstCellID = first.value;
         const cell = S2.S2Cell.fromString(firstCellID);
 
-        if (cell.level === 0) return;
+        if (cell.level === 1) return;
 
 
         const parents = new Map<string, number[]>();
@@ -98,7 +98,7 @@ export class MindunitsDB {
             if (cell.level !== S2MULevel - 1 || munits.length !== 4) {
                 this.muDBParents.set(id, approx);
 
-                if (cell.level === 0) {
+                if (cell.level === 1) {
                     console.log("Cell", id, approx);
                 }
             }
