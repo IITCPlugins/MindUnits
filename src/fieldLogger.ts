@@ -35,12 +35,16 @@ export class FieldLogger {
         return;
     }
 
-    repair(): void {
-        this.store.iterate((data: StoredField, guid) => {
+    async repair(): Promise<void> {
+        await this.store.iterate((data: StoredField, guid) => {
 
             const positions = this.guid2pos(guid);
             const latlngs = positions.map(p => L.latLng(p[0] * 1e-6, p[1] * 1e-6));
             if (latlngs.length !== 3) {
+                this.store.removeItem(guid);
+            }
+
+            if (latlngs[0].equals(latlngs[1]) || latlngs[1].equals(latlngs[2]) || latlngs[0].equals(latlngs[2])) {
                 this.store.removeItem(guid);
             }
         });
@@ -107,14 +111,125 @@ export class FieldLogger {
             return;
         }
 
+        const field = this.findLinkField(pos1, pos2);
+        if (field) {
+            const fp = field.options.data.points;
+            const pos3: Position = [fp[2].latE6, fp[2].lngE6];
+            const positions = [pos1, pos2, pos3];
+            this.storeField(time, positions, mindunits, field);
+            return;
+        }
+
+
         const pos3 = this.findThirdPortal(pos1, pos2);
         if (!pos3) {
             // console.debug("LogField: third portal not found");
             return;
         }
 
+        const positions = [pos1, pos2, pos3];
+        this.storeField(time, positions, mindunits, this.findField(positions));
+    }
+
+
+    private findLinkField(pos1: Position, pos2: Position): IITC.Field | undefined {
+        let found: IITC.Field | undefined;
+        for (const guid in window.fields) {
+            const field = window.fields[guid];
+            const fp = field.options.data.points
+
+            const match = this.compFieldLink(fp, pos1, pos2);
+            if (match >= 0) {
+                [fp[match], fp[2]] = [fp[2], fp[match]];
+                if (found) {
+                    return undefined;
+                }
+                found = field;
+            }
+        }
+
+        return found;
+    }
+
+    private compFieldLink(fp: { latE6: number, lngE6: number }[], p1: Position, p2: Position): number {
+        if (this.equal(fp[0], p1)) {
+            if (this.equal(fp[1], p2)) return 2;
+            if (this.equal(fp[2], p2)) return 1;
+            return -1;
+        }
+        if (this.equal(fp[1], p1)) {
+            if (this.equal(fp[0], p2)) return 2;
+            if (this.equal(fp[2], p2)) return 0;
+            return -1;
+        }
+        if (this.equal(fp[2], p1)) {
+            if (this.equal(fp[1], p2)) return 0;
+            if (this.equal(fp[0], p2)) return 1;
+            return -1;
+        }
+        return -1;
+    }
+
+    private findSecondPortal(relatedChats: Intel.ChatLine[], pos1: Position): Position | undefined {
+        let result: Position | undefined;
+
+        relatedChats.some(chatLine => {
+            const markup = chatLine[2].plext.markup;
+
+            // "linked"
+            if (markup[0][0] === "PLAYER" && markup[1][1].plain === " linked " && markup[2][0] === "PORTAL" && markup[4][0] === "PORTAL") {
+                const portal1 = markup[2][1];
+                const portal2 = markup[4][1];
+                if (portal1.latE6 === pos1[0] && portal1.lngE6 === pos1[1]) {
+                    result = [portal2.latE6, portal2.lngE6];
+                    return true;
+                }
+                if (portal2.latE6 === pos1[0] && portal2.lngE6 === pos1[1]) {
+                    result = [portal1.latE6, portal1.lngE6];
+                    return true;
+                }
+            }
+
+            return false;
+        });
+
+        return result;
+    }
+
+
+    private findThirdPortal(pos1: Position, pos2: Position): Position | undefined {
+        const portal1 = this.findPortalGuidByPositionE6(pos1[0], pos1[1]);
+        const portal2 = this.findPortalGuidByPositionE6(pos2[0], pos2[1]);
+        if (!portal1 || !portal2) {
+            console.debug("LogField: cannot find guid of portal 1 or 2");
+            return;
+        }
+
+        const canidates1 = this.getLinkedPortalguids(portal1);
+        const canidates2 = this.getLinkedPortalguids(portal2);
+        const canidates = canidates1.filter(l => canidates2.includes(l));
+
+        if (canidates.length === 0) {
+            console.log("LogField: matching portal3 loaded");
+            return;
+        }
+        if (canidates.length === 1) {
+            const portal3 = window.portals[canidates[0]];
+            if (!portal3) {
+                console.log("LogField: portal3 not loaded");
+                return;
+            }
+            return [portal3.options.data.latE6, portal3.options.data.lngE6];
+        }
+
+        console.log("LogField: TODO check multilayer");
+        return;
+    }
+
+
+    private async storeField(time: number, position: Position[], mindunits: number, field: IITC.Field | undefined): Promise<void> {
         console.info(`-FIELD- ${mindunits}`);
-        const myguid = this.pos2guid([pos1, pos2, pos3]);
+        const myguid = this.pos2guid(position);
 
         const old = await this.store.getItem(myguid) as StoredField;
         if (old) {
@@ -122,15 +237,15 @@ export class FieldLogger {
             if (old.time >= time) return;
         }
 
-        const iitcField = this.findField([pos1, pos2, pos3]);
-        if (iitcField && this.onNewField) {
-            this.onNewField(iitcField, mindunits);
+        if (field && this.onNewField) {
+            this.onNewField(field, mindunits);
         }
 
         this.store.setItem(myguid, {
             time,
             mus: mindunits
         });
+
     }
 
     pos2guid(pos_in: Position[]): string {
@@ -207,61 +322,7 @@ export class FieldLogger {
         });
     }
 
-    private findSecondPortal(relatedChats: Intel.ChatLine[], pos1: Position): Position | undefined {
-        let result: Position | undefined;
 
-        relatedChats.some(chatLine => {
-            const markup = chatLine[2].plext.markup;
-
-            // "linked"
-            if (markup[0][0] === "PLAYER" && markup[1][1].plain === " linked " && markup[2][0] === "PORTAL" && markup[4][0] === "PORTAL") {
-                const portal1 = markup[2][1];
-                const portal2 = markup[4][1];
-                if (portal1.latE6 === pos1[0] && portal1.lngE6 === pos1[1]) {
-                    result = [portal2.latE6, portal2.lngE6];
-                    return true;
-                }
-                if (portal2.latE6 === pos1[0] && portal2.lngE6 === pos1[1]) {
-                    result = [portal1.latE6, portal1.lngE6];
-                    return true;
-                }
-            }
-
-            return false;
-        });
-
-        return result;
-    }
-
-
-    private findThirdPortal(pos1: Position, pos2: Position): Position | undefined {
-        const portal1 = this.findPortalGuidByPositionE6(pos1[0], pos1[1]);
-        const portal2 = this.findPortalGuidByPositionE6(pos2[0], pos2[1]);
-        if (!portal1 || !portal2) {
-            console.debug("LogField: cannot find guid of portal 1 or 2");
-            return;
-        }
-
-        const canidates1 = this.getLinkedPortalguids(portal1);
-        const canidates2 = this.getLinkedPortalguids(portal2);
-        const canidates = canidates1.filter(l => canidates2.includes(l));
-
-        if (canidates.length === 0) {
-            console.log("LogField: matching portal3 loaded");
-            return;
-        }
-        if (canidates.length === 1) {
-            const portal3 = window.portals[canidates[0]];
-            if (!portal3) {
-                console.log("LogField: portal3 not loaded");
-                return;
-            }
-            return [portal3.options.data.latE6, portal3.options.data.lngE6];
-        }
-
-        console.log("LogField: TODO check multilayer");
-        return;
-    }
 
     private findPortalGuidByPositionE6(latE6: number, lngE6: number): string | undefined {
 
