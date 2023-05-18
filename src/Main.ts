@@ -28,6 +28,8 @@ class LogFields implements Plugin.Class {
     public areTrainCellsVisible: () => boolean;
     private setTrainCellsVisible: (show: boolean) => void;
 
+    private hasTrained: boolean;
+
 
     async init() {
 
@@ -45,8 +47,7 @@ class LogFields implements Plugin.Class {
         window.addLayerGroup("Field MUs", this.layer, false);
 
         this.muDB = new MindunitsDB();
-        this.train();
-
+        this.hasTrained = false;
 
         $("#toolbox").append($("<a>", { text: "LogField", click: () => new DebugDialog().show() }));
 
@@ -199,6 +200,10 @@ class LogFields implements Plugin.Class {
             text.push(`Total ${window.digits(total + dttotal)} Mu`);
         }
 
+        if (text.length > 15) {
+            text.splice(5, text.length - 15, "...")
+        }
+
         this.showTooltip(pos, text.join("<br>"));
     }
 
@@ -346,8 +351,9 @@ class LogFields implements Plugin.Class {
     }
 
     train(): void {
-        // this.fieldLog.repair();
+        this.fieldLog.repair();
         this.muDB.train(this.fieldLog);
+        this.hasTrained = true;
     }
 
     toggleTracking(): void {
@@ -363,6 +369,8 @@ class LogFields implements Plugin.Class {
     }
 
     enableTracking() {
+        if (!this.hasTrained) this.train();
+
         this.trackingActive = true;
         window.map.on("mousemove", this.onMouseMove);
         $("#logfieldbutton").addClass("active");
