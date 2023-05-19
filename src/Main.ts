@@ -49,7 +49,7 @@ class LogFields implements Plugin.Class {
         this.muDB = new MindunitsDB();
         this.hasTrained = false;
 
-        $("#toolbox").append($("<a>", { text: "LogField", click: () => new DebugDialog().show() }));
+        $("#toolbox").append($("<a>", { text: "Mindunits", click: () => new DebugDialog().show() }));
 
         const toolbarGroup = $("<div>", { class: "leaflet-bar leaflet-control plugin-logfields-icon", id: "logfieldbutton" })
             .append(

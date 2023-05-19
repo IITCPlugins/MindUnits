@@ -38,7 +38,7 @@ export class DebugDialog {
     show(): void {
 
         const dialog = window.dialog({
-            title: "LogField Debug Dialog",
+            title: "Mindunits Debug Dialog",
             html: "."
         })
 
