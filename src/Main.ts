@@ -55,8 +55,8 @@ class LogFields implements Plugin.Class {
             .append(
                 $("<a>", { class: "leaflet-bar-part" })
                     .css("background-image", myicon)
-                    .on("click", (() => this.toggleTracking())
-                    ));
+                    .on("click", (event) => this.toggleTracking(event))
+            );
 
         const parent = $(".leaflet-top.leaflet-left", window.map.getContainer()).first();
         parent.append(toolbarGroup);
@@ -351,12 +351,14 @@ class LogFields implements Plugin.Class {
     }
 
     train(): void {
-        this.fieldLog.repair();
+        // this.fieldLog.repair();
         this.muDB.train(this.fieldLog);
         this.hasTrained = true;
     }
 
-    toggleTracking(): void {
+    toggleTracking(event: JQuery.ClickEvent): void {
+        event.preventDefault();
+
         if (this.trackingActive) this.disableTracking();
         else this.enableTracking();
     }
@@ -364,6 +366,7 @@ class LogFields implements Plugin.Class {
     disableTracking() {
         this.trackingActive = false;
         this.hideTooltip();
+        window.clearTimeout(this.mouseDelayTimer);
         window.map.off("mousemove", this.onMouseMove)
         $("#logfieldbutton").removeClass("active");
     }
