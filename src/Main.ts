@@ -49,7 +49,12 @@ class LogFields implements Plugin.Class {
         this.muDB = new MindunitsDB();
         this.hasTrained = false;
 
-        $("#toolbox").append($("<a>", { text: "Mindunits", click: () => new DebugDialog().show() }));
+        $("#toolbox").append($("<a>", {
+            text: "Mindunits", click: () => {
+                this.train();
+                new DebugDialog().show()
+            }
+        }));
 
         const toolbarGroup = $("<div>", { class: "leaflet-bar leaflet-control plugin-logfields-icon", id: "logfieldbutton" })
             .append(
@@ -258,12 +263,24 @@ class LogFields implements Plugin.Class {
         }
     }
 
+    // private d = 0;
     private resultToString(result: MUResult): string {
 
         const mu = window.digits(result.mindunits);
 
         const error = (result.missing + result.approx) / result.cells;
         const errStr = ((1 - error) * 100).toFixed();
+
+        /*
+        switch ((this.d++) % 5) {
+            case 0: return `~ ?${mu} Mu (e=${errStr}%)`;
+            case 1: return `~ >${mu} Mu`;
+            case 2: return `~ ~${mu} Mu`;
+            case 3: return `~ ? (${mu} Mu)`;
+            case 4: return `~${mu} Mu`;
+        }
+        */
+
 
         if (result.missing !== 0 && result.approx !== 0) return `~ ?${mu} Mu (e=${errStr}%)`;
         if (result.missing > 0 && result.approx === 0) return `~ >${mu} Mu`;
