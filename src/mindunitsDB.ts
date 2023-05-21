@@ -44,15 +44,17 @@ export class MindunitsDB {
 
         const mu_per_detail = mindunits / total;
 
-        cells.forEach(cell => {
+        cells.forEach((cell, i) => {
             const id = cell.toString();
             const mu = mu_per_detail * S2MUDetailFactor;
 
             if (this.muDB.has(id)) {
                 const current = this.muDB.get(id)!;
                 if (current !== mu) {
-                    // console.log("MU diff:", current - mu, `${Math.round((1 - mu / current) * 1000) / 10}% `);
-                    this.muDB.set(id, (current + mu) / 2);
+
+                    const w = detailCells[i] / total;
+                    console.assert(w > 0 && w <= 1, "illegal percent value")
+                    this.muDB.set(id, (1 - w) * current + w * mu);
                 }
             } else {
                 this.muDB.set(id, mu);
