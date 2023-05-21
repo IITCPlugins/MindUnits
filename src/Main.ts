@@ -51,7 +51,7 @@ class LogFields implements Plugin.Class {
 
         $("#toolbox").append($("<a>", {
             text: "Mindunits", click: () => {
-                this.train();
+                if (!this.hasTrained) this.train();
                 new DebugDialog().show()
             }
         }));
