@@ -4,6 +4,7 @@ import * as S2 from "./lib/s2";
 export const S2MULevel = 10;
 export const S2MUDetailLevel = 17;
 const S2MUDetailFactor = Math.pow(4, S2MUDetailLevel - S2MULevel);
+const MAX_TRAIN_FACTOR = 0.9; // max influence a new field have on the S2 Value
 
 export interface Result {
     mindunits: number;
@@ -54,8 +55,10 @@ export class MindunitsDB {
                 const current = this.muDB.get(id)!;
                 if (current !== mu) {
 
-                    const w = detailCells[i] / total;
+                    let w = detailCells[i] / total;
                     console.assert(w > 0 && w <= 1, "illegal percent value")
+
+                    w = Math.min(w, MAX_TRAIN_FACTOR);
                     this.muDB.set(id, (1 - w) * current + w * mu);
                 }
             } else {
