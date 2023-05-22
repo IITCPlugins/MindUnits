@@ -1,0 +1,55 @@
+import { createSignal } from "solid-js";
+import * as S2 from "../lib/s2";
+import { main } from "../Main";
+
+
+export class RenderCells {
+
+    public areVisible: () => boolean;
+    private setVisible: (show: boolean) => void;
+
+    private layer: L.LayerGroup<any> | undefined;
+
+    constructor() {
+        [this.areVisible, this.setVisible] = createSignal<boolean>(false);
+    }
+
+
+    show(): void {
+        this.hide();
+
+        this.layer = new L.LayerGroup();
+
+        main.muDB.forEach((cell, mindunits) => {
+            const corners = cell.getCornerXYZ();
+            const cornersLL = corners.map(c => S2.XYZToLatLng(c));
+            cornersLL.push(cornersLL[0]);
+
+            this.layer!.addLayer(new L.GeodesicPolyline(cornersLL, { color: "#CCCC00" }));
+
+            const center = L.latLng((cornersLL[0].lat + cornersLL[2].lat) / 2, (cornersLL[0].lng + cornersLL[2].lng) / 2);
+            const marker = L.marker(center, {
+                icon: L.divIcon({
+                    iconSize: [48, 12],
+                    html: Math.ceil(mindunits).toString()
+                }),
+                interactive: false
+            });
+            this.layer!.addLayer(marker);
+
+        })
+
+        window.map.addLayer(this.layer);
+        this.setVisible(true);
+    }
+
+    hide(): void {
+        if (this.layer) {
+            window.map.removeLayer(this.layer);
+            this.layer = undefined;
+            this.setVisible(false);
+        }
+    }
+}
+
+export const renderCells = new RenderCells();

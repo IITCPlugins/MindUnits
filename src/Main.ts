@@ -4,7 +4,6 @@ import { FieldLogger } from "./fieldLogger";
 import { MindunitsDB, Result as MUResult, S2MUDetailLevel, S2MULevel } from "./mindunitsDB";
 import { DebugDialog } from "./ui/debugDialog";
 import myicon from "./ui/images/icon.svg";
-import { createSignal } from "solid-js";
 import { CSVExport } from "./lib/CSVExport";
 
 
@@ -13,20 +12,16 @@ const TOOLTIP_DELAY = 100;
 
 class LogFields implements Plugin.Class {
 
-    private fieldLog: FieldLogger;
-    private muDB: MindunitsDB;
+    public fieldLog: FieldLogger;
+    public muDB: MindunitsDB;
 
     private layer: L.LayerGroup<any>;
     private mustrings: Map<string, L.Marker> = new Map();
     private s2Cells: L.LayerGroup<any> | undefined;
-    private allCellsLayer: L.LayerGroup<any> | undefined;
 
     private trackingActive: boolean;
     private mouseDelayTimer: number | undefined;
     private tooltip: JQuery | undefined;
-
-    public areTrainCellsVisible: () => boolean;
-    private setTrainCellsVisible: (show: boolean) => void;
 
     private hasTrained: boolean;
 
@@ -65,8 +60,6 @@ class LogFields implements Plugin.Class {
 
         const parent = $(".leaflet-top.leaflet-left", window.map.getContainer()).first();
         parent.append(toolbarGroup);
-
-        [this.areTrainCellsVisible, this.setTrainCellsVisible] = createSignal<boolean>(false);
     }
 
     async getStatLogFieldCount(): Promise<number> {
@@ -332,40 +325,7 @@ class LogFields implements Plugin.Class {
     }
 
 
-    showMUDBCells(): void {
-        this.hideMUDBCells();
 
-        this.allCellsLayer = new L.LayerGroup();
-        this.muDB.forEach((cell, mindunits) => {
-            const corners = cell.getCornerXYZ();
-            const cornersLL = corners.map(c => S2.XYZToLatLng(c));
-            cornersLL.push(cornersLL[0]);
-
-            this.allCellsLayer!.addLayer(new L.GeodesicPolyline(cornersLL, { color: "#CCCC00" }));
-
-            const center = L.latLng((cornersLL[0].lat + cornersLL[2].lat) / 2, (cornersLL[0].lng + cornersLL[2].lng) / 2);
-            const marker = L.marker(center, {
-                icon: L.divIcon({
-                    iconSize: [48, 12],
-                    html: Math.ceil(mindunits).toString()
-                }),
-                interactive: false
-            });
-            this.allCellsLayer!.addLayer(marker);
-
-        })
-
-        window.map.addLayer(this.allCellsLayer);
-        this.setTrainCellsVisible(true);
-    }
-
-    hideMUDBCells(): void {
-        if (this.allCellsLayer) {
-            window.map.removeLayer(this.allCellsLayer);
-            this.allCellsLayer = undefined;
-            this.setTrainCellsVisible(false);
-        }
-    }
 
     train(): void {
         // this.fieldLog.repair();

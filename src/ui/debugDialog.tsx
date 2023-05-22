@@ -1,6 +1,8 @@
-import { render } from "solid-js/web";
+import { Show, render } from "solid-js/web";
+import { createSignal } from "solid-js";
 import { main } from "../Main";
-import { createSignal, Show } from "solid-js";
+import { renderCells } from "./render_cells";
+import { renderFields } from "./render_fields";
 
 const [count, setCount] = createSignal<number>(0);
 const [MUerror, setMUError] = createSignal<number>(0);
@@ -21,10 +23,16 @@ const DebugDialogContent = () => {
     return (<>
         <DBStatus />
         <Show
-            when={!main.areTrainCellsVisible()}
-            fallback={<button onClick={() => main.hideMUDBCells()}>Hide trained cells</button>}
+            when={!renderCells.areVisible()}
+            fallback={<button onClick={() => renderCells.hide()}>Hide trained cells</button>}
         >
-            <button onClick={() => main.showMUDBCells()}>Show trained cells</button>;
+            <button onClick={() => renderCells.show()}>Show trained cells</button>
+        </Show ><br/>
+        <Show
+            when={!renderFields.areVisible()}
+            fallback={<button onClick={() => renderFields.hide()}>Hide stored cells</button>}
+        >
+            <button onClick={() => renderFields.show()}>Show stored fields</button>
         </Show ><br/>
         <button onClick={() => main.train()}>Train</button><br/>
         <hr></hr>
@@ -32,6 +40,7 @@ const DebugDialogContent = () => {
         <button onClick={() => main.exportFields()}>Export FieldList</button><br/>
     </>)
 }
+
 
 export class DebugDialog {
 
