@@ -1,6 +1,7 @@
 import * as localforage from "localforage";
 
-const MINIMUM_MUS = 100;
+const MINIMUM_MUS = 100; // don't store fields with lesser MU
+const DOUBLE_FIELD_DIFF_FACTOR = 0.7; // the MU differenz for double fields should have atleasts this factor (to prevent wrong assignment)
 
 type Position = [number, number];
 interface StoredField {
@@ -79,12 +80,17 @@ export class FieldLogger {
                 const atPosition: Position = [portal_raw.latE6, portal_raw.lngE6];
                 const mindunits = markup[4][0] === "TEXT" ? parseInt(markup[4][1].plain) : 0;
 
+                const processed = new Set([guid]); // prevent doubled lines
                 const relatedChats = fullChat.filter(chat => {
-                    return chat[1] === time &&
-                        chat[0] !== guid &&
+                    const isRelated = chat[1] === time &&
                         chat[2].plext.markup[0][0] === "PLAYER" &&
                         chat[2].plext.markup[0][1].plain === markup[0][1].plain &&
-                        chat[2].plext.plextType === "SYSTEM_BROADCAST";
+                        chat[2].plext.plextType === "SYSTEM_BROADCAST" &&
+                        !processed.has(chat[0]);
+
+                    processed.add(chat[0]);
+
+                    return isRelated
                 });
 
                 this.onCreatedFieldMsg(relatedChats, guid, time, mindunits, atPosition);
@@ -132,7 +138,11 @@ export class FieldLogger {
                     return;
                 }
 
-                if (secondFieldMindunits > mindunits) [secondFieldMindunits, mindunits] = [mindunits, secondFieldMindunits];
+                if (secondFieldMindunits > mindunits) [mindunits, secondFieldMindunits] = [secondFieldMindunits, mindunits];
+                if (secondFieldMindunits / mindunits > DOUBLE_FIELD_DIFF_FACTOR) {
+                    console.debug("double field MU is to close", mindunits, secondFieldMindunits);
+                    return;
+                }
 
                 this.storeIITCField(time, pos1, pos2, fields[0], mindunits);
                 this.storeIITCField(time, pos1, pos2, fields[1], secondFieldMindunits);
@@ -154,6 +164,8 @@ export class FieldLogger {
     }
 
     private storeIITCField(time: number, pos1: Position, pos2: Position, field: IITC.Field, mindunits: number): void {
+        if (mindunits < MINIMUM_MUS) return;
+
         const fp = field.options.data.points;
         const pos3: Position = [fp[2].latE6, fp[2].lngE6];
         const positions = [pos1, pos2, pos3];
@@ -390,7 +402,7 @@ export class FieldLogger {
 
         if (otherCreateFieldLines.length === 0) return;
         if (otherCreateFieldLines.length > 1) {
-            console.error("tripel CREATED FIELD line");
+            console.error("tripel CREATED FIELD line", relatedChats);
             return;
         }
 
