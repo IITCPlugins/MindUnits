@@ -26,9 +26,13 @@ export class MindunitsDB {
 
     async train(fieldLog: FieldLogger): Promise<void> {
         console.time("logfield_train");
-        let skip = 0;
+        let count = 0;
+        let skip = 2;
+        // DEBUG-START
         // we train only every second field to get a better "error" value
-        await fieldLog.forEach((latlngs, mindunits) => { if (skip++ % 2) this.trainField(latlngs, mindunits) });
+        skip = 1;
+        // DEBUG-END
+        await fieldLog.forEach((latlngs, mindunits) => { if ((count++ % skip) === 0) this.trainField(latlngs, mindunits) });
         console.timeEnd("logfield_train");
 
         console.time("logfield_train_approx");
