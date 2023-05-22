@@ -101,26 +101,48 @@ export class FieldLogger {
             return;
         }
 
-        if (this.isDoubleField(relatedChats)) {
-            return;
-        }
-
         const pos2 = this.findSecondPortal(relatedChats, pos1);
         if (!pos2) {
-            // console.error("LogField: no link msg found");
+            console.error("LogField: no link msg found", relatedChats);
             return;
         }
 
-        const field = this.findLinkField(pos1, pos2);
-        if (field) {
-            const fp = field.options.data.points;
-            const pos3: Position = [fp[2].latE6, fp[2].lngE6];
-            const positions = [pos1, pos2, pos3];
-            this.storeField(time, positions, mindunits, field);
-            return;
+        const fields = this.findLinkFields(pos1, pos2);
+        let secondFieldMindunits = this.getSecondFieldMU(relatedChats)
+
+        switch (fields.length) {
+
+            case 0: break;
+
+            case 1:
+                if (secondFieldMindunits) {
+                    console.log("two field created messages, but no 2 fields found");
+                    return;
+                }
+                this.storeIITCField(time, pos1, pos2, fields[0], mindunits);
+                return;
+
+            case 2:
+                if (!secondFieldMindunits) {
+                    console.log("multiple fields found but not multiple chat messages");
+                    return;
+                }
+                if (secondFieldMindunits <= 0) {
+                    console.debug("double field found but can't parse MU", relatedChats);
+                    return;
+                }
+
+                if (secondFieldMindunits > mindunits) [secondFieldMindunits, mindunits] = [mindunits, secondFieldMindunits];
+
+                this.storeIITCField(time, pos1, pos2, fields[0], mindunits);
+                this.storeIITCField(time, pos1, pos2, fields[1], secondFieldMindunits);
+                return;
+
+            default:
+                return;
         }
 
-
+        // Fallback -> search links
         const pos3 = this.findThirdPortal(pos1, pos2);
         if (!pos3) {
             // console.debug("LogField: third portal not found");
@@ -131,9 +153,18 @@ export class FieldLogger {
         this.storeField(time, positions, mindunits, this.findField(positions));
     }
 
+    private storeIITCField(time: number, pos1: Position, pos2: Position, field: IITC.Field, mindunits: number): void {
+        const fp = field.options.data.points;
+        const pos3: Position = [fp[2].latE6, fp[2].lngE6];
+        const positions = [pos1, pos2, pos3];
+        this.storeField(time, positions, mindunits, field);
+    }
 
-    private findLinkField(pos1: Position, pos2: Position): IITC.Field | undefined {
-        let found: IITC.Field | undefined;
+
+    private findLinkFields(pos1: Position, pos2: Position): IITC.Field[] {
+        const allFields: IITC.Field[] = [];
+
+        // find fields
         for (const guid in window.fields) {
             const field = window.fields[guid];
             const fp = field.options.data.points
@@ -141,16 +172,54 @@ export class FieldLogger {
             const match = this.compFieldLink(fp, pos1, pos2);
             if (match >= 0) {
                 [fp[match], fp[2]] = [fp[2], fp[match]];
-                if (found) {
-                    return undefined;
-                }
-                found = field;
+                allFields.push(field);
             }
         }
 
-        return found;
-    }
+        // filter fields -> only the biggest left+right
+        // NB: don't do this at home, this calculation is okay for here but not for the real world
+        const px1 = pos1[0];
+        const py1 = pos1[1];
+        const px2 = pos2[0];
+        const py2 = pos2[1];
 
+        let left_dist = 0;
+        let right_dist = 0;
+        let left: IITC.Field | undefined = undefined;
+        let right: IITC.Field | undefined = undefined;
+
+        allFields.forEach(field => {
+            const fp = field.options.data.points
+            const x = fp[2].latE6;
+            const y = fp[2].lngE6;
+
+            let distance = (py1 - py2) * x + (px2 - px1) * y + px1 * py2 - px2 * py1;
+
+            if (distance < 0) {
+                if (distance < left_dist) {
+                    left_dist = distance;
+                    left = field;
+                }
+            } else {
+                if (distance > right_dist) {
+                    right_dist = distance;
+                    right = field;
+                }
+            }
+        })
+
+        if (left) {
+            if (right) {
+                if (-left_dist > right_dist) return [left, right];
+                return [right, left];
+            } else {
+                return [left];
+            }
+        } else {
+            if (right) return [right];
+            return [];
+        }
+    }
     private compFieldLink(fp: { latE6: number, lngE6: number }[], p1: Position, p2: Position): number {
         if (this.equal(fp[0], p1)) {
             if (this.equal(fp[1], p2)) return 2;
@@ -312,14 +381,24 @@ export class FieldLogger {
         return a.latE6 === b[0] && a.lngE6 === b[1];
     }
 
+    private getSecondFieldMU(relatedChats: Intel.ChatLine[]): number | undefined {
 
-
-
-    private isDoubleField(relatedChats: Intel.ChatLine[]): boolean {
-        return relatedChats.some(chatline => {
+        const otherCreateFieldLines = relatedChats.filter(chatline => {
             const markup = chatline[2].plext.markup;
             return markup[1][1].plain === " created a Control Field @"
         });
+
+        if (otherCreateFieldLines.length === 0) return;
+        if (otherCreateFieldLines.length > 1) {
+            console.error("tripel CREATED FIELD line");
+            return;
+        }
+
+        const createMessage = otherCreateFieldLines[0]!;
+        const markup = createMessage[2].plext.markup;
+        const mindunits = markup[4][0] === "TEXT" ? parseInt(markup[4][1].plain) : -1;
+
+        return mindunits;
     }
 
 
