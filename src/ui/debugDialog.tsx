@@ -4,17 +4,17 @@ import { main } from "../Main";
 import { renderCells } from "./render_cells";
 import { renderFields } from "./render_fields";
 
-const [count, setCount] = createSignal<number>(0);
-const [MUerror, setMUError] = createSignal<number>(0);
+const [count, setCount] = createSignal<number>();
+const [MUerror, setMUError] = createSignal<number>();
 
 
 const DBStatus = () => {
     void main.getStatLogFieldCount().then(c => setCount(c));
     void main.getMUError().then(c => setMUError(c));
     return <div style="border: solid 1px yellow">
-        Known Fields: {count()}<br />
+        Known Fields: {count() ? count() : "?"}<br />
         Trained Cells: {main.getCellCount()}<br />
-        Avg.Error: {MUerror()}
+        Avg.Error: {MUerror() ? MUerror() : "?"}
     </div> as any;
 }
 
@@ -27,17 +27,17 @@ const DebugDialogContent = () => {
             fallback={<button onClick={() => renderCells.hide()}>Hide trained cells</button>}
         >
             <button onClick={() => renderCells.show()}>Show trained cells</button>
-        </Show ><br/>
+        </Show ><br />
         <Show
             when={!renderFields.areVisible()}
-            fallback={<button onClick={() => renderFields.hide()}>Hide stored cells</button>}
+            fallback={<button onClick={() => renderFields.hide()}>Hide known fields</button>}
         >
-            <button onClick={() => renderFields.show()}>Show stored fields</button>
-        </Show ><br/>
-        <button onClick={() => main.train()}>Train</button><br/>
+            <button onClick={() => renderFields.show()}>Show known fields</button>
+        </Show ><br />
+        <button onClick={() => main.train()}>Train</button><br />
         <hr></hr>
-        <button onClick={() => main.exportError()}>Export ErrorList</button><br/>
-        <button onClick={() => main.exportFields()}>Export FieldList</button><br/>
+        <button onClick={() => main.exportError()}>Export ErrorList</button><br />
+        <button onClick={() => main.exportFields()}>Export FieldList</button><br />
     </>)
 }
 
