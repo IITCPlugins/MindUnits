@@ -330,14 +330,15 @@ class LogFields implements Plugin.Class {
     }
 
 
-
-
-    async train(): Promise<void> {
-        // this.fieldLog.repair();
-        this.isTraining = true;
-        await this.muDB.train(this.fieldLog);
-        this.hasTrained = true;
-        this.isTraining = false;
+    async train(force = false): Promise<void> {
+        if (this.isTraining) return; // FIXME: return running Promise
+        if (!this.hasTrained || force) {
+            // this.fieldLog.repair();
+            this.isTraining = true;
+            await this.muDB.train(this.fieldLog);
+            this.hasTrained = true;
+            this.isTraining = false;
+        }
     }
 
     toggleTracking(event: JQuery.ClickEvent): void {
@@ -356,7 +357,7 @@ class LogFields implements Plugin.Class {
     }
 
     enableTracking() {
-        if (!this.hasTrained) this.train();
+        this.train();
 
         this.trackingActive = true;
         window.map.on("mousemove", this.onMouseMove);
