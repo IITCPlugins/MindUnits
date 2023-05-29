@@ -24,6 +24,7 @@ class LogFields implements Plugin.Class {
     private tooltip: JQuery | undefined;
 
     private hasTrained: boolean;
+    private isTraining: boolean;
 
 
     async init() {
@@ -259,6 +260,10 @@ class LogFields implements Plugin.Class {
     // private d = 0;
     private resultToString(result: MUResult): string {
 
+
+        if (this.isTraining) return "(train, plt wait)";
+        if (!this.hasTrained) return "(err: not trained)";
+
         const mu = window.digits(result.mindunits);
 
         const error = (result.missing + result.approx) / result.cells;
@@ -327,10 +332,12 @@ class LogFields implements Plugin.Class {
 
 
 
-    train(): void {
+    async train(): Promise<void> {
         // this.fieldLog.repair();
-        this.muDB.train(this.fieldLog);
+        this.isTraining = true;
+        await this.muDB.train(this.fieldLog);
         this.hasTrained = true;
+        this.isTraining = false;
     }
 
     toggleTracking(event: JQuery.ClickEvent): void {
