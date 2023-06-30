@@ -261,7 +261,7 @@ class LogFields implements Plugin.Class {
     private resultToString(result: MUResult): string {
 
 
-        if (this.isTraining) return "(train, plt wait)";
+        if (this.isTraining) return "(train, plz wait)";
         if (!this.hasTrained) return "(err: not trained)";
 
         const mu = window.digits(result.mindunits);

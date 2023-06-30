@@ -1,5 +1,9 @@
 Changelog:
 
+v1.2
+- show message if training is still running
+- prevent multiple training runs
+
 v1.1
 - log double fields
 - improved training routine
