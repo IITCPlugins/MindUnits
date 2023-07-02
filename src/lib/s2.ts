@@ -1,4 +1,6 @@
-type Face = number;
+/* eslint-disable no-bitwise */
+/* eslint-disable max-classes-per-file */
+type Face = 0 | 1 | 2 | 3 | 4 | 5;
 type LatLng = { lat: number; lng: number };
 type XYZ = [number, number, number];
 type UV = [number, number];
@@ -6,7 +8,7 @@ type ST = [number, number];
 type IJ = [number, number];
 type Level = number;
 
-export function LatLngToXYZ(latLng: LatLng): XYZ {
+export const LatLngToXYZ = (latLng: LatLng): XYZ => {
     const d2r = Math.PI / 180.0;
 
     const phi = latLng.lat * d2r;
@@ -17,7 +19,7 @@ export function LatLngToXYZ(latLng: LatLng): XYZ {
     return [Math.cos(theta) * cosphi, Math.sin(theta) * cosphi, Math.sin(phi)];
 }
 
-export function XYZToLatLng(xyz: XYZ): LatLng {
+export const XYZToLatLng = (xyz: XYZ): LatLng => {
     const r2d = 180.0 / Math.PI;
 
     const lat = Math.atan2(xyz[2], Math.sqrt(xyz[0] * xyz[0] + xyz[1] * xyz[1]));
@@ -26,17 +28,17 @@ export function XYZToLatLng(xyz: XYZ): LatLng {
     return { lat: lat * r2d, lng: lng * r2d };
 }
 
-function largestAbsComponent(xyz: XYZ) {
-    const temp = [Math.abs(xyz[0]), Math.abs(xyz[1]), Math.abs(xyz[2])];
+const largestAbsComponent = (xyz: XYZ): 0 | 1 | 2 => {
+    const abs = [Math.abs(xyz[0]), Math.abs(xyz[1]), Math.abs(xyz[2])];
 
-    if (temp[0] > temp[1]) {
-        if (temp[0] > temp[2]) {
+    if (abs[0] > abs[1]) {
+        if (abs[0] > abs[2]) {
             return 0;
         } else {
             return 2;
         }
     } else {
-        if (temp[1] > temp[2]) {
+        if (abs[1] > abs[2]) {
             return 1;
         } else {
             return 2;
@@ -44,8 +46,9 @@ function largestAbsComponent(xyz: XYZ) {
     }
 }
 
-function faceXYZToUV(face: Face, xyz: XYZ): UV {
-    let u: number, v: number;
+const faceXYZToUV = (face: Face, xyz: XYZ): UV => {
+    let u: number;
+    let v: number;
 
     switch (face) {
         case 0:
@@ -73,17 +76,17 @@ function faceXYZToUV(face: Face, xyz: XYZ): UV {
             v = -xyz[0] / xyz[2];
             break;
         default:
-            throw { error: 'Invalid face' };
+            throw new Error("Invalid face");
     }
 
     return [u, v];
 }
 
-function XYZToFaceUV(xyz: XYZ): [Face, UV] {
-    let face = largestAbsComponent(xyz);
+const XYZToFaceUV = (xyz: XYZ): [Face, UV] => {
+    let face: Face = largestAbsComponent(xyz);
 
     if (xyz[face] < 0) {
-        face += 3;
+        face = (face + 3) as Face;
     }
 
     const uv = faceXYZToUV(face, xyz);
@@ -91,7 +94,7 @@ function XYZToFaceUV(xyz: XYZ): [Face, UV] {
     return [face, uv];
 }
 
-function FaceUVToXYZ(face: Face, uv: UV): XYZ {
+const FaceUVToXYZ = (face: Face, uv: UV): XYZ => {
     const u = uv[0];
     const v = uv[1];
 
@@ -109,46 +112,49 @@ function FaceUVToXYZ(face: Face, uv: UV): XYZ {
         case 5:
             return [v, u, -1];
         default:
-            throw { error: 'Invalid face' };
+            throw new Error("Invalid face");
     }
 }
 
-function STToUV(st: ST): UV {
-    function quadSTtoUV(st: number) {
-        if (st >= 0.5) {
-            return (1 / 3.0) * (4 * st * st - 1);
+const STToUV = (st: ST): UV => {
+    // eslint-disable-next-line unicorn/consistent-function-scoping
+    const quadSTtoUV = (stn: number): number => {
+        if (stn >= 0.5) {
+            return (1 / 3.0) * (4 * stn * stn - 1);
         } else {
-            return (1 / 3.0) * (1 - 4 * (1 - st) * (1 - st));
+            return (1 / 3.0) * (1 - 4 * (1 - stn) * (1 - stn));
         }
     }
 
     return [quadSTtoUV(st[0]), quadSTtoUV(st[1])];
 }
 
-function UVToST(uv: UV): ST {
-    function quadUVtoST(uv: number) {
-        if (uv >= 0) {
-            return 0.5 * Math.sqrt(1 + 3 * uv);
+
+const UVToST = (uv: UV): ST => {
+    // eslint-disable-next-line unicorn/consistent-function-scoping
+    const quadUVtoST = (uvn: number): number => {
+        if (uvn >= 0) {
+            return 0.5 * Math.sqrt(1 + 3 * uvn);
         } else {
-            return 1 - 0.5 * Math.sqrt(1 - 3 * uv);
+            return 1 - 0.5 * Math.sqrt(1 - 3 * uvn);
         }
     }
 
     return [quadUVtoST(uv[0]), quadUVtoST(uv[1])];
 }
 
-function STToIJ(st: ST, order: Level): IJ {
+const STToIJ = (st: ST, order: Level): IJ => {
     const maxSize = 1 << order;
 
-    function singleSTtoIJ(st: number) {
-        const ij = Math.floor(st * maxSize);
+    const singleSTtoIJ = (stn: number): number => {
+        const ij = Math.floor(stn * maxSize);
         return Math.max(0, Math.min(maxSize - 1, ij));
     }
 
     return [singleSTtoIJ(st[0]), singleSTtoIJ(st[1])];
 }
 
-function IJToST(ij: IJ, order: Level, offsets: IJ): ST {
+const IJToST = (ij: IJ, order: Level, offsets: IJ): ST => {
     const maxSize = 1 << order;
 
     return [(ij[0] + offsets[0]) / maxSize, (ij[1] + offsets[1]) / maxSize];
@@ -159,35 +165,35 @@ function IJToST(ij: IJ, order: Level, offsets: IJ): ST {
 // note: rather then calculating the final integer hilbert position, we just return the list of quads
 // this ensures no precision issues whth large orders (S3 cell IDs use up to 30), and is more
 // convenient for pulling out the individual bits as needed later
-function pointToHilbertQuadList(x: number, y: number, order: Level) {
+const pointToHilbertQuadList = (x: number, y: number, order: Level): number[] => {
     const hilbertMap: { [i: string]: [number, string][] } = {
         a: [
-            [0, 'd'],
-            [1, 'a'],
-            [3, 'b'],
-            [2, 'a'],
+            [0, "d"],
+            [1, "a"],
+            [3, "b"],
+            [2, "a"]
         ],
         b: [
-            [2, 'b'],
-            [1, 'b'],
-            [3, 'a'],
-            [0, 'c'],
+            [2, "b"],
+            [1, "b"],
+            [3, "a"],
+            [0, "c"]
         ],
         c: [
-            [2, 'c'],
-            [3, 'd'],
-            [1, 'c'],
-            [0, 'b'],
+            [2, "c"],
+            [3, "d"],
+            [1, "c"],
+            [0, "b"]
         ],
         d: [
-            [0, 'a'],
-            [3, 'c'],
-            [1, 'd'],
-            [2, 'd'],
-        ],
+            [0, "a"],
+            [3, "c"],
+            [1, "d"],
+            [2, "d"]
+        ]
     };
 
-    let currentSquare = 'a';
+    let currentSquare = "a";
     const positions = [];
 
     for (let i = order - 1; i >= 0; i--) {
@@ -206,23 +212,23 @@ function pointToHilbertQuadList(x: number, y: number, order: Level) {
     return positions;
 }
 
-function cross(a: XYZ, b: XYZ): XYZ {
+const cross = (a: XYZ, b: XYZ): XYZ => {
     return [
         a[1] * b[2] - a[2] * b[1],
         a[2] * b[0] - a[0] * b[2],
-        a[0] * b[1] - a[1] * b[0],
+        a[0] * b[1] - a[1] * b[0]
     ];
 }
 
-function dot(a: XYZ, b: XYZ) {
+const dot = (a: XYZ, b: XYZ): number => {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
-function det(a: XYZ, b: XYZ, c: XYZ) {
+const det = (a: XYZ, b: XYZ, c: XYZ): number => {
     return dot(cross(a, b), c);
 }
 
-function simple_crossing(a: XYZ, b: XYZ, c: XYZ, d: XYZ) {
+const simple_crossing = (a: XYZ, b: XYZ, c: XYZ, d: XYZ): boolean => {
     const ab = cross(a, b);
     const acb = -dot(ab, c);
     const bda = dot(ab, d);
@@ -248,21 +254,21 @@ export class S2Polyline implements S2Region {
         this.points = points || [];
     }
 
-    empty() {
-        return this.points.length == 0;
+    empty(): boolean {
+        return this.points.length === 0;
     }
 
-    contains(s: S2Cell) {
+    contains(_s: S2Cell): boolean {
         return false;
     }
 
-    mayIntersect(s: S2Cell) {
+    mayIntersect(s: S2Cell): boolean {
         if (this.empty()) return false;
 
         for (const point of this.points) if (s.contains(point)) return true;
 
         const corners = s.getCornerXYZ();
-        for (let i = this.points.length - 1; i > 0; i--)
+        for (let i = this.points.length - 1; i > 0; i--) {
             if (
                 corners.some((p, j) =>
                     simple_crossing(
@@ -272,8 +278,8 @@ export class S2Polyline implements S2Region {
                         corners[(j + 1) % 4]
                     )
                 )
-            )
-                return true;
+            ) { return true; }
+        }
 
         return false;
     }
@@ -290,7 +296,7 @@ export class S2Triangle extends S2Polyline {
         this.centerSides = [
             det(this.center, a, b),
             det(this.center, b, c),
-            det(this.center, c, a),
+            det(this.center, c, a)
         ];
     }
 
@@ -305,12 +311,9 @@ export class S2Triangle extends S2Polyline {
 
 
     containsPoint(xyz: XYZ) {
-        if (det(xyz, this.points[0], this.points[1]) * this.centerSides[0] < 0)
-            return false;
-        if (det(xyz, this.points[1], this.points[2]) * this.centerSides[1] < 0)
-            return false;
-        if (det(xyz, this.points[2], this.points[0]) * this.centerSides[2] < 0)
-            return false;
+        if (det(xyz, this.points[0], this.points[1]) * this.centerSides[0] < 0) { return false; }
+        if (det(xyz, this.points[1], this.points[2]) * this.centerSides[1] < 0) { return false; }
+        if (det(xyz, this.points[2], this.points[0]) * this.centerSides[2] < 0) { return false; }
         return true;
     }
 
@@ -335,15 +338,15 @@ export class S2RegionCover {
     }
 
     getCoveringFromCell(start: S2Cell): S2Cell[] {
-        const ret: S2Cell[] = [];
+        const cells: S2Cell[] = [];
         const frontier = new Set<string>();
         const stack = [start];
         frontier.add(start.toString());
-        while (stack.length) {
+        while (stack.length > 0) {
             const s = stack.pop()!;
             if (!this.region.mayIntersect(s)) continue;
 
-            ret.push(s);
+            cells.push(s);
             for (const ns of s.getNeighbors()) {
                 if (!frontier.has(ns.toString())) {
                     frontier.add(ns.toString());
@@ -351,7 +354,7 @@ export class S2RegionCover {
                 }
             }
         }
-        return ret;
+        return cells;
     }
 
     getCovering(region: S2Region, level_min: Level, level_max: Level): S2Cell[] {
@@ -413,7 +416,7 @@ export class S2Cell {
 
     private uvBound: [UV, UV];
 
-    //static method to construct
+    // static method to construct cell
     static FromLatLng(latLng: LatLng, level: Level): S2Cell {
         const xyz = LatLngToXYZ(latLng);
 
@@ -445,7 +448,7 @@ export class S2Cell {
         }
 
         const g = m.groups;
-        return S2Cell.FromFaceIJ(Number(g.face), [Number(g.i), Number(g.j)], Number(g.level));
+        return S2Cell.FromFaceIJ(Number(g.face) as Face, [Number(g.i), Number(g.j)], Number(g.level));
     }
 
     toString() {
@@ -455,7 +458,7 @@ export class S2Cell {
 
     contains(xyz: XYZ) {
         const [face, uv] = XYZToFaceUV(xyz);
-        if (face != this.face) return false;
+        if (face !== this.face) return false;
 
         const [uv0, uv1] = this.uvBound;
         return (
@@ -477,7 +480,7 @@ export class S2Cell {
             [0.0, 0.0],
             [0.0, 1.0],
             [1.0, 1.0],
-            [1.0, 0.0],
+            [1.0, 0.0]
         ];
 
         for (let i = 0; i < 4; i++) {
@@ -499,39 +502,39 @@ export class S2Cell {
     }
 
     getNeighbors() {
-        function fromFaceIJWrap(face: Face, ij: IJ, level: Level) {
-            const maxSize = 1 << level;
-            if (ij[0] >= 0 && ij[1] >= 0 && ij[0] < maxSize && ij[1] < maxSize) {
-                // no wrapping out of bounds
-                return S2Cell.FromFaceIJ(face, ij, level);
-            } else {
-                // the new i,j are out of range.
-                // with the assumption that they're only a little past the borders we can just take the points as
-                // just beyond the cube face, project to XYZ, then re-create FaceUV from the XYZ vector
-
-                let st = IJToST(ij, level, [0.5, 0.5]);
-                let uv = STToUV(st);
-                const xyz = FaceUVToXYZ(face, uv);
-                const faceuv = XYZToFaceUV(xyz);
-                face = faceuv[0];
-                uv = faceuv[1];
-                st = UVToST(uv);
-                ij = STToIJ(st, level);
-                return S2Cell.FromFaceIJ(face, ij, level);
-            }
-        }
-
         const face = this.face;
         const i = this.ij[0];
         const j = this.ij[1];
         const level = this.level;
 
         return [
-            fromFaceIJWrap(face, [i - 1, j], level),
-            fromFaceIJWrap(face, [i, j - 1], level),
-            fromFaceIJWrap(face, [i + 1, j], level),
-            fromFaceIJWrap(face, [i, j + 1], level),
+            this.fromFaceIJWrap(face, [i - 1, j], level),
+            this.fromFaceIJWrap(face, [i, j - 1], level),
+            this.fromFaceIJWrap(face, [i + 1, j], level),
+            this.fromFaceIJWrap(face, [i, j + 1], level)
         ];
+    }
+
+    private fromFaceIJWrap(face: Face, ij: IJ, level: Level): S2Cell {
+        const maxSize = 1 << level;
+        if (ij[0] >= 0 && ij[1] >= 0 && ij[0] < maxSize && ij[1] < maxSize) {
+            // no wrapping out of bounds
+            return S2Cell.FromFaceIJ(face, ij, level);
+        } else {
+            // the new i,j are out of range.
+            // with the assumption that they're only a little past the borders we can just take the points as
+            // just beyond the cube face, project to XYZ, then re-create FaceUV from the XYZ vector
+
+            let st = IJToST(ij, level, [0.5, 0.5]);
+            let uv = STToUV(st);
+            const xyz = FaceUVToXYZ(face, uv);
+            const faceuv = XYZToFaceUV(xyz);
+            face = faceuv[0];
+            uv = faceuv[1];
+            st = UVToST(uv);
+            ij = STToIJ(st, level);
+            return S2Cell.FromFaceIJ(face, ij, level);
+        }
     }
 
     getChildren() {
@@ -543,12 +546,12 @@ export class S2Cell {
             S2Cell.FromFaceIJ(face, [i, j], level),
             S2Cell.FromFaceIJ(face, [i, j + 1], level),
             S2Cell.FromFaceIJ(face, [i + 1, j], level),
-            S2Cell.FromFaceIJ(face, [i + 1, j + 1], level),
+            S2Cell.FromFaceIJ(face, [i + 1, j + 1], level)
         ];
     }
 
-    getParent() {
-        if (this.level <= 1) return null;
+    getParent(): S2Cell | undefined {
+        if (this.level <= 1) return;
         const face = this.face;
         const i = this.ij[0] >> 1;
         const j = this.ij[1] >> 1;
