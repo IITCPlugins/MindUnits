@@ -70,21 +70,19 @@ export class FieldLogger {
         fullChat.forEach(chatLine => {
             if (chatLine[2].plext.plextType !== "SYSTEM_BROADCAST") return;
 
-            const markup = chatLine[2].plext.markup;
-
-            if (markup[0][0] === "PLAYER" && markup[1][1].plain === " created a Control Field @" && markup[2][0] === "PORTAL") {
+            const isField = this.isControlFieldMessage(chatLine[2].plext.markup);
+            if (isField) {
 
                 const guid = chatLine[0];
                 const time = chatLine[1];
-                const portal_raw = markup[2][1] as Intel.MarkUpPortalType;
-                const atPosition: Position = [portal_raw.latE6, portal_raw.lngE6];
-                const mindunits = markup[4][0] === "TEXT" ? parseInt(markup[4][1].plain) : 0;
+                const atPosition: Position = isField.position;
+                const mindunits = isField.mindunits;
 
                 const processed = new Set([guid]); // prevent doubled lines
                 const relatedChats = fullChat.filter(chat => {
                     const isRelated = chat[1] === time &&
                         chat[2].plext.markup[0][0] === "PLAYER" &&
-                        chat[2].plext.markup[0][1].plain === markup[0][1].plain &&
+                        chat[2].plext.markup[0][1].plain === isField.agent &&
                         chat[2].plext.plextType === "SYSTEM_BROADCAST" &&
                         !processed.has(chat[0]);
 
@@ -98,7 +96,31 @@ export class FieldLogger {
         });
     }
 
+    private isControlFieldMessage(markup: Intel.MarkUp): { position: Position, mindunits: number, agent: string } | undefined {
+        // new line:
+        // "<FACTION> agent <AGENT> created a Control Field @<PORTAL> +<MU> Mus"
+        if (markup.length > 5 && markup[2][0] === "PLAYER" && markup[3][1].plain === " created a Control Field @" && markup[4][0] === "PORTAL") {
+            const portal_raw = markup[4][1] as Intel.MarkUpPortalType;
+            return {
+                position: [portal_raw.latE6, portal_raw.lngE6],
+                mindunits: markup[6][0] === "TEXT" ? parseInt(markup[6][1].plain) : 0,
+                agent: markup[2][1].plain
+            }
+        }
 
+        // old line
+        // "<AGENT> created a Control Field @<PORTAL> +<MU> Mus"
+        if (markup.length > 4 && markup[0][0] === "PLAYER" && markup[1][1].plain === " created a Control Field @" && markup[2][0] === "PORTAL") {
+            const portal_raw = markup[2][1] as Intel.MarkUpPortalType;
+            return {
+                position: [portal_raw.latE6, portal_raw.lngE6],
+                mindunits: markup[4][0] === "TEXT" ? parseInt(markup[4][1].plain) : 0,
+                agent: markup[0][1].plain
+            }
+        }
+
+        return;
+    }
 
 
     private async onCreatedFieldMsg(relatedChats: Intel.ChatLine[], guid: string, time: number, mindunits: number, pos1: Position) {
@@ -257,8 +279,23 @@ export class FieldLogger {
         relatedChats.some(chatLine => {
             const markup = chatLine[2].plext.markup;
 
+            // new line:
+            // "<FACTION> agent <AGENT> link from <PORTAL> to <PORTAL>"
+            if (markup.length > 5 && markup[2][0] === "PLAYER" && markup[3][1].plain === " linked " && markup[4][0] === "PORTAL" && markup[6][0] === "PORTAL") {
+                const portal1 = markup[4][1];
+                const portal2 = markup[6][1];
+                if (portal1.latE6 === pos1[0] && portal1.lngE6 === pos1[1]) {
+                    result = [portal2.latE6, portal2.lngE6];
+                    return true;
+                }
+                if (portal2.latE6 === pos1[0] && portal2.lngE6 === pos1[1]) {
+                    result = [portal1.latE6, portal1.lngE6];
+                    return true;
+                }
+            }
+            // old line
             // "linked"
-            if (markup[0][0] === "PLAYER" && markup[1][1].plain === " linked " && markup[2][0] === "PORTAL" && markup[4][0] === "PORTAL") {
+            if (markup.length > 3 && markup[0][0] === "PLAYER" && markup[1][1].plain === " linked " && markup[2][0] === "PORTAL" && markup[4][0] === "PORTAL") {
                 const portal1 = markup[2][1];
                 const portal2 = markup[4][1];
                 if (portal1.latE6 === pos1[0] && portal1.lngE6 === pos1[1]) {
@@ -270,12 +307,13 @@ export class FieldLogger {
                     return true;
                 }
             }
-
             return false;
         });
 
         return result;
     }
+
+
 
 
     private findThirdPortal(pos1: Position, pos2: Position): Position | undefined {
