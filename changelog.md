@@ -1,5 +1,9 @@
 Changelog:
 
+v1.3
+- recognize new intel log messages
+- increase cell details
+
 v1.2
 - show message if training is still running
 - prevent multiple training runs
