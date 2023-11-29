@@ -84,7 +84,9 @@ export class FieldLogger {
                         chat[2].plext.plextType === "SYSTEM_BROADCAST" &&
                         !processed.has(chat[0]);
 
-                    processed.add(chat[0]);
+                    if (isRelated) {
+                        processed.add(chat[0]);
+                    }
 
                     return isRelated
                 });
