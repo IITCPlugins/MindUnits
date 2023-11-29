@@ -67,7 +67,8 @@ export class FieldLogger {
 
     onChatData = (chatEvent: EventPublicChatDataAvailable): void => {
         const fullChat = chatEvent.result;
-        fullChat.forEach(chatLine => {
+        fullChat.forEach((chatLine, index) => {
+            // console.debug("chat-#", index, chatLine[2].plext.markup);
             if (chatLine[2].plext.plextType !== "SYSTEM_BROADCAST") return;
 
             const isField = this.isControlFieldMessage(chatLine[2].plext.markup);
@@ -91,7 +92,7 @@ export class FieldLogger {
                     return isRelated
                 });
 
-                this.onCreatedFieldMsg(relatedChats, time, mindunits, atPosition, isField.agent);
+                void this.onCreatedFieldMsg(relatedChats, time, mindunits, atPosition, isField.agent);
             }
         });
     }
