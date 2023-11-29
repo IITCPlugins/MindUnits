@@ -81,8 +81,6 @@ export class FieldLogger {
                 const processed = new Set([guid]); // prevent doubled lines
                 const relatedChats = fullChat.filter(chat => {
                     const isRelated = chat[1] === time &&
-                        chat[2].plext.markup[0][0] === "PLAYER" &&
-                        chat[2].plext.markup[0][1].plain === isField.agent &&
                         chat[2].plext.plextType === "SYSTEM_BROADCAST" &&
                         !processed.has(chat[0]);
 
@@ -91,7 +89,7 @@ export class FieldLogger {
                     return isRelated
                 });
 
-                this.onCreatedFieldMsg(relatedChats, guid, time, mindunits, atPosition);
+                this.onCreatedFieldMsg(relatedChats, time, mindunits, atPosition, isField.agent);
             }
         });
     }
@@ -123,13 +121,14 @@ export class FieldLogger {
     }
 
 
-    private async onCreatedFieldMsg(relatedChats: Intel.ChatLine[], guid: string, time: number, mindunits: number, pos1: Position) {
+    private async onCreatedFieldMsg(relatedChats: Intel.ChatLine[], time: number, mindunits: number, pos1: Position, agent: string) {
 
         if (mindunits < MINIMUM_MUS) {
             return;
         }
 
-        const pos2 = this.findSecondPortal(relatedChats, pos1);
+        // console.debug("LogField-Messages", relatedChats, pos1, agent);
+        const pos2 = this.findSecondPortal(relatedChats, pos1, agent);
         if (!pos2) {
             console.error("LogField: no link msg found", relatedChats);
             return;
@@ -273,7 +272,7 @@ export class FieldLogger {
         return -1;
     }
 
-    private findSecondPortal(relatedChats: Intel.ChatLine[], pos1: Position): Position | undefined {
+    private findSecondPortal(relatedChats: Intel.ChatLine[], pos1: Position, agent: string): Position | undefined {
         let result: Position | undefined;
 
         relatedChats.some(chatLine => {
@@ -281,7 +280,9 @@ export class FieldLogger {
 
             // new line:
             // "<FACTION> agent <AGENT> link from <PORTAL> to <PORTAL>"
-            if (markup.length > 5 && markup[2][0] === "PLAYER" && markup[3][1].plain === " linked " && markup[4][0] === "PORTAL" && markup[6][0] === "PORTAL") {
+            if (markup.length === 7 &&
+                markup[2][0] === "PLAYER" && markup[2][1].plain === agent &&
+                markup[3][1].plain === " linked from " && markup[4][0] === "PORTAL" && markup[6][0] === "PORTAL") {
                 const portal1 = markup[4][1];
                 const portal2 = markup[6][1];
                 if (portal1.latE6 === pos1[0] && portal1.lngE6 === pos1[1]) {
@@ -295,7 +296,9 @@ export class FieldLogger {
             }
             // old line
             // "linked"
-            if (markup.length > 3 && markup[0][0] === "PLAYER" && markup[1][1].plain === " linked " && markup[2][0] === "PORTAL" && markup[4][0] === "PORTAL") {
+            if (markup.length > 3 &&
+                markup[0][0] === "PLAYER" && markup[0][1].plain === agent &&
+                markup[1][1].plain === " linked " && markup[2][0] === "PORTAL" && markup[4][0] === "PORTAL") {
                 const portal1 = markup[2][1];
                 const portal2 = markup[4][1];
                 if (portal1.latE6 === pos1[0] && portal1.lngE6 === pos1[1]) {
@@ -312,8 +315,6 @@ export class FieldLogger {
 
         return result;
     }
-
-
 
 
     private findThirdPortal(pos1: Position, pos2: Position): Position | undefined {

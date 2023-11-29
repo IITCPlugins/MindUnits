@@ -1,5 +1,9 @@
 Changelog:
 
+v1.3.1
+- fixed link-message detection 
+a additional check was still testing for the old chat format
+
 v1.3
 - recognize new intel log messages
 - increase cell details
