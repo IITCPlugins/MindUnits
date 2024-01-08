@@ -301,7 +301,7 @@ export class FieldLogger {
             // "linked"
             if (markup.length > 3 &&
                 markup[0][0] === "PLAYER" && markup[0][1].plain === agent &&
-                markup[1][1].plain === " linked " && markup[2][0] === "PORTAL" && markup[4][0] === "PORTAL") {
+                markup[1][1].plain.startsWith(" linked") && markup[2][0] === "PORTAL" && markup[4][0] === "PORTAL") {
                 const portal1 = markup[2][1];
                 const portal2 = markup[4][1];
                 if (portal1.latE6 === pos1[0] && portal1.lngE6 === pos1[1]) {
