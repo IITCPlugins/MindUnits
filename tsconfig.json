@@ -28,7 +28,7 @@
   ],
   "include": [
     "types/*.d.ts",
-    "./src/**/*.ts"
+    "./src/**/*"
   ],
   "ts-node": {
     "compilerOptions": {
