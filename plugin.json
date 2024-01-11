@@ -1,8 +1,8 @@
 {
-  "name": "IITC plugin: LogFields",
-  "id": "iitc_plugin_LogFields",
+  "name": "IITC plugin: MindUnits",
+  "id": "iitc_plugin_mindunits",
   "category": "Misc",
-  "description": "Log fields MUs",
+  "description": "Estiminate field MUs (and log existing fields)",
   "author": "McBen",
   "entry": "src/Main.ts",
   "minimize": false, 
