@@ -1,0 +1,26 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - "*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: borales/actions-yarn@v4.2.0
+        with:
+          cmd: install
+      - uses: borales/actions-yarn@v4.2.0
+        with:
+          cmd: build:prod
+      - uses: EndBug/add-and-commit@v9.1.3
+        with:
+          add: dist/* -f
+          default_author: github_actions
+          message: "Release Version Update"
+          new_branch: main

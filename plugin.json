@@ -2,9 +2,10 @@
   "name": "IITC plugin: MindUnits",
   "id": "iitc_plugin_mindunits",
   "category": "Misc",
-  "description": "Estiminate field MUs (and log existing fields)",
+  "description": "Estimate field MUs (and log existing fields)",
   "author": "McBen",
   "entry": "src/Main.ts",
   "minimize": false, 
-  "changelog": "changelog.md"
+  "changelog": "changelog.md",
+  "downloadURL": "https://github.com/IITCPlugins/MindUnits/raw/main/dist/iitc_plugin_mindunits.user.js"
 }
