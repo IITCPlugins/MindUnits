@@ -35,7 +35,7 @@ Usage
 =====
 Activate the tool button.
 When you move the mouse cursor over a field or a drawtool polygon you'll get popups like:  
-[screenshot]
+![Screenshot](/assets/screenshot.png)
 
 Values without a prefix were taken from DB. These are known fields.
 "~" values are calculated. Hopefully with more testing we get closer to the real values.
@@ -50,11 +50,11 @@ There is a small dialog purposed for debugging. It shows how many "Known field" 
 You should never need the "train" button but maybe the export list can be usfull for some experiments?
 
 There are some more prefixes in the tooltip for debugging:
-"~" calculated by trained cells
-"~ ~" some cells were missing but approximations exists
-"~ >" some covered cells had no value, real MU will be higher than this value
-"~ ?" a mix of these before, so this value is most like to be false
-"~ ? (x Mu)" no real data
+- "\~" calculated by trained cells
+- "\~ \~" some cells were missing but approximations exists
+- "\~ >" some covered cells had no value, real MU will be higher than this value
+- "\~ ?" a mix of these before, so this value is most like to be false
+- "\~ ? (x Mu)" no real data
 
 
 Contribution
