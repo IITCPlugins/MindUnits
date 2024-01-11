@@ -1,5 +1,8 @@
 Changelog:
 
+v1.3.2
+- docs and github action (no functional change)
+
 v1.3.1
 - fixed link-message detection 
 a additional check was still testing for the old chat format
