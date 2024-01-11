@@ -165,7 +165,7 @@ const IJToST = (ij: IJ, order: Level, offsets: IJ): ST => {
 // note: rather then calculating the final integer hilbert position, we just return the list of quads
 // this ensures no precision issues whth large orders (S3 cell IDs use up to 30), and is more
 // convenient for pulling out the individual bits as needed later
-const pointToHilbertQuadList = (x: number, y: number, order: Level): number[] => {
+const pointToHilbertQuadList = (face: Face, x: number, y: number, order: Level): number[] => {
     const hilbertMap: { [i: string]: [number, string][] } = {
         a: [
             [0, "d"],
@@ -193,7 +193,7 @@ const pointToHilbertQuadList = (x: number, y: number, order: Level): number[] =>
         ]
     };
 
-    let currentSquare = "a";
+    let currentSquare = face & 1 ? 'd' : 'a';
     const positions = [];
 
     for (let i = order - 1; i >= 0; i--) {
@@ -211,6 +211,34 @@ const pointToHilbertQuadList = (x: number, y: number, order: Level): number[] =>
 
     return positions;
 }
+
+/**
+   * reverse of @see pointToHilbertQuadList
+   */
+export const hilbertQuadListToPoint = (face: Face, positions: number[]): IJ => {
+    const hilbertMapReverse: { [i: string]: [number, string][] } = {
+      'a': [[0, 'd'], [1, 'a'], [3, 'a'], [2, 'b']],
+      'b': [[3, 'c'], [1, 'b'], [0, 'b'], [2, 'a']],
+      'c': [[3, 'b'], [2, 'c'], [0, 'c'], [1, 'd']],
+      'd': [[0, 'a'], [2, 'd'], [3, 'd'], [1, 'c']]
+    };
+
+    let currentSquare = face & 1 ? 'd' : 'a';
+    let i = 0;
+    let j = 0;
+
+    positions.forEach(v => {
+      const t = hilbertMapReverse[currentSquare][v];
+      i <<= 1;
+      j <<= 1;
+      if (t[0] & 2) i |= 1;
+      if (t[0] & 1) j |= 1;
+      currentSquare = t[1];
+    });
+
+    return [i, j];
+  };
+
 
 const cross = (a: XYZ, b: XYZ): XYZ => {
     return [
@@ -441,6 +469,16 @@ export class S2Cell {
         return cell;
     }
 
+    /**
+     * Create cell by face and hilbertcurve position
+     * (this is like the original CellID construction)
+     */
+    static FromFacePosition(face: Face, position: number[]): S2Cell {
+        const ij = hilbertQuadListToPoint(face, position)
+        return S2Cell.FromFaceIJ(face, ij, position.length);
+    }
+    
+
     static fromString(code: string): S2Cell {
         const m = code.match(/(?<face>\d+)\[(?<i>\d+),(?<j>\d+)\](?<level>\d+)/);
         if (!m || !m.groups) {
@@ -496,7 +534,7 @@ export class S2Cell {
     }
 
     getFaceAndQuads() {
-        const quads = pointToHilbertQuadList(this.ij[0], this.ij[1], this.level);
+        const quads = pointToHilbertQuadList(this.face, this.ij[0], this.ij[1], this.level);
 
         return [this.face, quads];
     }
