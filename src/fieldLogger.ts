@@ -17,6 +17,7 @@ export class FieldLogger {
     private store: LocalForage;
     public onNewField: NewFieldCallback | undefined;
 
+
     init() {
         window.addHook("publicChatDataAvailable", this.onChatData);
 
@@ -34,22 +35,6 @@ export class FieldLogger {
         const old = await this.store.getItem(myguid) as StoredField;
         if (old) return old.mus;
         return;
-    }
-
-    async repair(): Promise<void> {
-        await this.store.iterate((data: StoredField, guid) => {
-
-            const positions = this.guid2pos(guid);
-            const latlngs = positions.map(p => L.latLng(p[0] * 1e-6, p[1] * 1e-6));
-            if (latlngs.length !== 3) {
-                this.store.removeItem(guid);
-            }
-
-            if (latlngs[0].equals(latlngs[1]) || latlngs[1].equals(latlngs[2]) || latlngs[0].equals(latlngs[2])) {
-                this.store.removeItem(guid);
-            }
-        });
-
     }
 
 
@@ -97,6 +82,7 @@ export class FieldLogger {
         });
     }
 
+    
     private isControlFieldMessage(markup: Intel.MarkUp): { position: Position, mindunits: number, agent: string } | undefined {
         // new line:
         // "<FACTION> agent <AGENT> created a Control Field @<PORTAL> +<MU> Mus"

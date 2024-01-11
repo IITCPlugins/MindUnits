@@ -333,7 +333,6 @@ class LogFields implements Plugin.Class {
     async train(force = false): Promise<void> {
         if (this.isTraining) return; // FIXME: return running Promise
         if (!this.hasTrained || force) {
-            // this.fieldLog.repair();
             this.isTraining = true;
             await this.muDB.train(this.fieldLog);
             this.hasTrained = true;
