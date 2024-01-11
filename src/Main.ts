@@ -257,7 +257,6 @@ class LogFields implements Plugin.Class {
         }
     }
 
-    // private d = 0;
     private resultToString(result: MUResult): string {
 
 
@@ -268,17 +267,6 @@ class LogFields implements Plugin.Class {
 
         const error = (result.missing + result.approx) / result.cells;
         const errStr = ((1 - error) * 100).toFixed();
-
-        /*
-        switch ((this.d++) % 5) {
-            case 0: return `~ ?${mu} Mu (e=${errStr}%)`;
-            case 1: return `~ >${mu} Mu`;
-            case 2: return `~ ~${mu} Mu`;
-            case 3: return `~ ? (${mu} Mu)`;
-            case 4: return `~${mu} Mu`;
-        }
-        */
-
 
         if (result.missing !== 0 && result.approx !== 0) return `~ ?${mu} Mu (e=${errStr}%)`;
         if (result.missing > 0 && result.approx === 0) return `~ >${mu} Mu`;
