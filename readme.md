@@ -4,6 +4,9 @@ An IITC-Plugin for the game Ingress.
 
 This is an experimental Plugin. Maybe someday it will be useable out-of-the-box but not now!
 
+Install
+=======
+the plugin: [Plugin](https://github.com/IITCPlugins/MindUnits/raw/main/dist/iitc_plugin_mindunits.user.js)
 
 What it does
 ============
