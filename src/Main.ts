@@ -268,10 +268,14 @@ class LogFields implements Plugin.Class {
         const error = (result.missing + result.approx) / result.cells;
         const errStr = ((1 - error) * 100).toFixed();
 
-        if (result.missing !== 0 && result.approx !== 0) return `~ ?${mu} Mu (e=${errStr}%)`;
-        if (result.missing > 0 && result.approx === 0) return `~ >${mu} Mu`;
+        // some cell data was missing but we were able to use approx by neighbour cells       
         if (result.missing === 0 && result.approx > 0) return `~ ~${mu} Mu`;
+        // some cell data was missing
+        if (result.missing > 0 && result.approx === 0) return `~ >${mu} Mu`;
+        // there was no data. result is just a guess
         if (result.missing + result.approx === result.cells) return `~ ? (${mu} Mu)`;
+        // there was some data. but some data were missing
+        if (result.missing !== 0 && result.approx !== 0) return `~ ?${mu} Mu (e=${errStr}%)`;
 
         return `~${mu} Mu`;
     }
