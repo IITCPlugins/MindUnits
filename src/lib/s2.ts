@@ -9,7 +9,7 @@ type IJ = [number, number];
 type Level = number;
 
 export const LatLngToXYZ = (latLng: LatLng): XYZ => {
-    const d2r = Math.PI / 180.0;
+    const d2r = Math.PI / 180;
 
     const phi = latLng.lat * d2r;
     const theta = latLng.lng * d2r;
@@ -20,9 +20,9 @@ export const LatLngToXYZ = (latLng: LatLng): XYZ => {
 }
 
 export const XYZToLatLng = (xyz: XYZ): LatLng => {
-    const r2d = 180.0 / Math.PI;
+    const r2d = 180 / Math.PI;
 
-    const lat = Math.atan2(xyz[2], Math.sqrt(xyz[0] * xyz[0] + xyz[1] * xyz[1]));
+    const lat = Math.atan2(xyz[2], Math.hypot(xyz[0], xyz[1]));
     const lng = Math.atan2(xyz[1], xyz[0]);
 
     return { lat: lat * r2d, lng: lng * r2d };
@@ -32,17 +32,9 @@ const largestAbsComponent = (xyz: XYZ): 0 | 1 | 2 => {
     const abs = [Math.abs(xyz[0]), Math.abs(xyz[1]), Math.abs(xyz[2])];
 
     if (abs[0] > abs[1]) {
-        if (abs[0] > abs[2]) {
-            return 0;
-        } else {
-            return 2;
-        }
+        return abs[0] > abs[2] ? 0 : 2;
     } else {
-        if (abs[1] > abs[2]) {
-            return 1;
-        } else {
-            return 2;
-        }
+        return abs[1] > abs[2] ? 1 : 2;
     }
 }
 
@@ -166,7 +158,7 @@ const IJToST = (ij: IJ, order: Level, offsets: IJ): ST => {
 // this ensures no precision issues whth large orders (S3 cell IDs use up to 30), and is more
 // convenient for pulling out the individual bits as needed later
 const pointToHilbertQuadList = (face: Face, x: number, y: number, order: Level): number[] => {
-    const hilbertMap: { [i: string]: [number, string][] } = {
+    const hilbertMap: Record<string, [number, string][]> = {
         a: [
             [0, "d"],
             [1, "a"],
@@ -216,11 +208,11 @@ const pointToHilbertQuadList = (face: Face, x: number, y: number, order: Level):
    * reverse of @see pointToHilbertQuadList
    */
 export const hilbertQuadListToPoint = (face: Face, positions: number[]): IJ => {
-    const hilbertMapReverse: { [i: string]: [number, string][] } = {
-      'a': [[0, 'd'], [1, 'a'], [3, 'a'], [2, 'b']],
-      'b': [[3, 'c'], [1, 'b'], [0, 'b'], [2, 'a']],
-      'c': [[3, 'b'], [2, 'c'], [0, 'c'], [1, 'd']],
-      'd': [[0, 'a'], [2, 'd'], [3, 'd'], [1, 'c']]
+    const hilbertMapReverse: Record<string, [number, string][]> = {
+        'a': [[0, 'd'], [1, 'a'], [3, 'a'], [2, 'b']],
+        'b': [[3, 'c'], [1, 'b'], [0, 'b'], [2, 'a']],
+        'c': [[3, 'b'], [2, 'c'], [0, 'c'], [1, 'd']],
+        'd': [[0, 'a'], [2, 'd'], [3, 'd'], [1, 'c']]
     };
 
     let currentSquare = face & 1 ? 'd' : 'a';
@@ -228,16 +220,16 @@ export const hilbertQuadListToPoint = (face: Face, positions: number[]): IJ => {
     let j = 0;
 
     positions.forEach(v => {
-      const t = hilbertMapReverse[currentSquare][v];
-      i <<= 1;
-      j <<= 1;
-      if (t[0] & 2) i |= 1;
-      if (t[0] & 1) j |= 1;
-      currentSquare = t[1];
+        const t = hilbertMapReverse[currentSquare][v];
+        i <<= 1;
+        j <<= 1;
+        if (t[0] & 2) i |= 1;
+        if (t[0] & 1) j |= 1;
+        currentSquare = t[1];
     });
 
     return [i, j];
-  };
+};
 
 
 const cross = (a: XYZ, b: XYZ): XYZ => {
@@ -279,7 +271,7 @@ export class S2Polyline implements S2Region {
     points: XYZ[];
 
     constructor(points?: XYZ[]) {
-        this.points = points || [];
+        this.points = points ?? [];
     }
 
     empty(): boolean {
@@ -345,13 +337,14 @@ export class S2Triangle extends S2Polyline {
         return true;
     }
 
+    /**
+     * @returhn true if atleast one corner is inside the region
+     */
     mayIntersect(s: S2Cell) {
         if (super.mayIntersect(s)) return true;
 
         const corners = s.getCornerXYZ();
-        for (const p of corners) if (this.containsPoint(p)) return true;
-
-        return false;
+        return corners.some(p => this.containsPoint(p));
     }
 }
 
@@ -387,7 +380,7 @@ export class S2RegionCover {
 
     getCovering(region: S2Region, level_min: Level, level_max: Level): S2Cell[] {
         if (level_min > level_max) {
-            [level_min, level_max] = [level_min, level_max];
+            [level_min, level_max] = [level_max, level_min];
             console.warn("s2.getCovering: level-min > level-max");
         }
         this.region = region;
@@ -477,11 +470,11 @@ export class S2Cell {
         const ij = hilbertQuadListToPoint(face, position)
         return S2Cell.FromFaceIJ(face, ij, position.length);
     }
-    
+
 
     static fromString(code: string): S2Cell {
-        const m = code.match(/(?<face>\d+)\[(?<i>\d+),(?<j>\d+)\](?<level>\d+)/);
-        if (!m || !m.groups) {
+        const m = /(?<face>\d+)\[(?<i>\d+),(?<j>\d+)\](?<level>\d+)/.exec(code);
+        if (!m?.groups) {
             throw new Error(`Invalid cell code: ${code}`);
         }
 
@@ -515,10 +508,10 @@ export class S2Cell {
     getCornerXYZ(): XYZ[] {
         const result: XYZ[] = [];
         const offsets: IJ[] = [
-            [0.0, 0.0],
-            [0.0, 1.0],
-            [1.0, 1.0],
-            [1.0, 0.0]
+            [0, 0],
+            [0, 1],
+            [1, 1],
+            [1, 0]
         ];
 
         for (let i = 0; i < 4; i++) {
