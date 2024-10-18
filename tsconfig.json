@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
     "module": "es6",
-    "target": "es6",
+    "target": "es2018",
     "outDir": "dist/",
     "moduleResolution": "node",
-    "allowJs": false, 
+    "allowJs": false,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
     "typeRoots": [
@@ -34,5 +34,5 @@
     "compilerOptions": {
       "module": "CommonJS"
     }
-  }  
+  }
 }
