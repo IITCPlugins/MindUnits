@@ -80,7 +80,7 @@ export class MindunitsDB {
         }
 
         const first = fields.keys().next();
-        const firstCellID = first.value;
+        const firstCellID = first.value as string;
         const cell = S2.S2Cell.fromString(firstCellID);
 
         if (cell.level === 1) return;

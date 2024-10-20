@@ -16,7 +16,7 @@ class LogFields implements Plugin.Class {
     public muDB: MindunitsDB;
 
     private layer: L.LayerGroup<any>;
-    private mustrings: Map<string, L.Marker> = new Map();
+    private mustrings = new Map<string, L.Marker>();
     private s2Cells: L.LayerGroup<any> | undefined;
 
     private trackingActive: boolean;
@@ -27,8 +27,9 @@ class LogFields implements Plugin.Class {
     private isTraining: boolean;
 
 
-    async init() {
+    init() {
 
+        // eslint-disable-next-line @typescript-eslint/no-require-imports, unicorn/prefer-module
         require("./ui/styles.pcss");
 
         this.fieldLog = new FieldLogger();
@@ -47,7 +48,7 @@ class LogFields implements Plugin.Class {
 
         $("#toolbox").append($("<a>", {
             text: "Mindunits", click: () => {
-                if (!this.hasTrained) this.train();
+                if (!this.hasTrained) void this.train();
                 new DebugDialog().show()
             }
         }));
@@ -117,12 +118,12 @@ class LogFields implements Plugin.Class {
     }
 
 
-    checkForTooltip(ev: L.LeafletMouseEvent): void {
-        const point = ev.layerPoint;
+    checkForTooltip(event: L.LeafletMouseEvent): void {
+        const point = event.layerPoint;
         const fields = [];
         const drawTools: L.Polygon[] = [];
 
-        for (var guid in window.fields) {
+        for (const guid in window.fields) {
             const field = window.fields[guid];
 
             const positions: L.Point[][] = (<any>field)._rings;
@@ -132,7 +133,7 @@ class LogFields implements Plugin.Class {
             }
         }
 
-        const dt = window.plugin.drawTools && window.plugin.drawTools.drawnItems;
+        const dt = window.plugin.drawTools?.drawnItems;
         if (dt) {
             dt.eachLayer((layer: L.ILayer) => {
                 if (layer instanceof L.GeodesicPolygon || layer instanceof L.Polygon) {
@@ -147,15 +148,15 @@ class LogFields implements Plugin.Class {
         }
 
         if (fields.length > 0 || drawTools.length > 0) {
-            this.createTooltip(ev.latlng, fields, drawTools);
+            void this.createTooltip(event.latlng, fields, drawTools);
         } else {
             this.hideTooltip();
         }
     }
 
     pnpoly(polygon: L.Point[], point: L.Point) {
-        var inside = 0;
-        for (var i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+        let inside = 0;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
             // @ts-ignore
             inside ^= polygon[i].y > point.y !== polygon[j].y > point.y &&
                 point.x - polygon[i].x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y);
@@ -192,8 +193,8 @@ class LogFields implements Plugin.Class {
             text.push(`<hr>${fields.length} Fields = ${window.digits(total)} Mu`);
         }
         if (dttotal > 0) {
-            const sep = total > 0 ? "" : "<hr>";
-            text.push(`${sep}DrawTools = ${window.digits(dttotal)} Mu`);
+            const separator = total > 0 ? "" : "<hr>";
+            text.push(`${separator}DrawTools = ${window.digits(dttotal)} Mu`);
         }
         if (total > 0 && dttotal > 0) {
             text.push(`Total ${window.digits(total + dttotal)} Mu`);
@@ -229,11 +230,11 @@ class LogFields implements Plugin.Class {
 
     }
 
-    private async getDTPolygonText(polygon: L.Polygon): Promise<{ text: string, mindunits: number }> {
+    private getDTPolygonText(polygon: L.Polygon): { text: string, mindunits: number } {
 
         // TODO: add S2 Polygon Region
 
-        let total: MUResult = {
+        const total: MUResult = {
             mindunits: 0,
             cells: 0,
             missing: 0,
@@ -266,7 +267,7 @@ class LogFields implements Plugin.Class {
         const mu = window.digits(result.mindunits);
 
         const error = (result.missing + result.approx) / result.cells;
-        const errStr = ((1 - error) * 100).toFixed();
+        const errorStr = ((1 - error) * 100).toFixed(0);
 
         // some cell data was missing but we were able to use approx by neighbour cells       
         if (result.missing === 0 && result.approx > 0) return `~ ~${mu} Mu`;
@@ -275,7 +276,7 @@ class LogFields implements Plugin.Class {
         // there was no data. result is just a guess
         if (result.missing + result.approx === result.cells) return `~ ? (${mu} Mu)`;
         // there was some data. but some data were missing
-        if (result.missing !== 0 && result.approx !== 0) return `~ ?${mu} Mu (e=${errStr}%)`;
+        if (result.missing !== 0 && result.approx !== 0) return `~ ?${mu} Mu (e=${errorStr}%)`;
 
         return `~${mu} Mu`;
     }
@@ -348,16 +349,16 @@ class LogFields implements Plugin.Class {
     }
 
     enableTracking() {
-        this.train();
+        void this.train();
 
         this.trackingActive = true;
         window.map.on("mousemove", this.onMouseMove);
         $("#logfieldbutton").addClass("active");
     }
 
-    onMouseMove = (ev: L.LeafletMouseEvent) => {
+    onMouseMove = (event: L.LeafletMouseEvent) => {
         window.clearTimeout(this.mouseDelayTimer);
-        this.mouseDelayTimer = window.setTimeout(() => this.checkForTooltip(ev), TOOLTIP_DELAY);
+        this.mouseDelayTimer = window.setTimeout(() => this.checkForTooltip(event), TOOLTIP_DELAY);
 
         this.hideTooltip();
     }
@@ -365,7 +366,7 @@ class LogFields implements Plugin.Class {
     showTooltip(latlng: L.LatLng, text: string): void {
         if (!this.tooltip) {
             this.tooltip = $("<div>", { class: "logfield-tooltip" });
-            const pane = window.map.getPanes()["popupPane"]; // FIXME <- does this work in leaflet 0.77???
+            const pane = window.map.getPanes().popupPane;
             this.tooltip.appendTo(pane);
         }
 

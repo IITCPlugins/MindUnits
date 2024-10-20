@@ -32,7 +32,7 @@ export class FieldLogger {
         const p = field.options.data.points.map(p => <Position>[p.latE6, p.lngE6]);
         const myguid = this.pos2guid(p);
 
-        const old = await this.store.getItem(myguid) as StoredField;
+        const old: StoredField | null = await this.store.getItem(myguid);
         if (old) return old.mus;
         return;
     }
@@ -52,8 +52,7 @@ export class FieldLogger {
 
     onChatData = (chatEvent: EventPublicChatDataAvailable): void => {
         const fullChat = chatEvent.result;
-        fullChat.forEach((chatLine, index) => {
-            // console.debug("chat-#", index, chatLine[2].plext.markup);
+        fullChat.forEach(chatLine => {
             if (chatLine[2].plext.plextType !== "SYSTEM_BROADCAST") return;
 
             const isField = this.isControlFieldMessage(chatLine[2].plext.markup);
@@ -82,12 +81,12 @@ export class FieldLogger {
         });
     }
 
-    
+
     private isControlFieldMessage(markup: Intel.MarkUp): { position: Position, mindunits: number, agent: string } | undefined {
         // new line:
         // "<FACTION> agent <AGENT> created a Control Field @<PORTAL> +<MU> Mus"
         if (markup.length > 5 && markup[2][0] === "PLAYER" && markup[3][1].plain === " created a Control Field @" && markup[4][0] === "PORTAL") {
-            const portal_raw = markup[4][1] as Intel.MarkUpPortalType;
+            const portal_raw = markup[4][1];
             return {
                 position: [portal_raw.latE6, portal_raw.lngE6],
                 mindunits: markup[6][0] === "TEXT" ? parseInt(markup[6][1].plain) : 0,
@@ -98,7 +97,7 @@ export class FieldLogger {
         // old line
         // "<AGENT> created a Control Field @<PORTAL> +<MU> Mus"
         if (markup.length > 4 && markup[0][0] === "PLAYER" && markup[1][1].plain === " created a Control Field @" && markup[2][0] === "PORTAL") {
-            const portal_raw = markup[2][1] as Intel.MarkUpPortalType;
+            const portal_raw = markup[2][1];
             return {
                 position: [portal_raw.latE6, portal_raw.lngE6],
                 mindunits: markup[4][0] === "TEXT" ? parseInt(markup[4][1].plain) : 0,
@@ -170,7 +169,7 @@ export class FieldLogger {
         }
 
         const positions = [pos1, pos2, pos3];
-        this.storeField(time, positions, mindunits, this.findField(positions));
+        await this.storeField(time, positions, mindunits, this.findField(positions));
     }
 
     private storeIITCField(time: number, pos1: Position, pos2: Position, field: IITC.Field, mindunits: number): void {
@@ -179,7 +178,7 @@ export class FieldLogger {
         const fp = field.options.data.points;
         const pos3: Position = [fp[2].latE6, fp[2].lngE6];
         const positions = [pos1, pos2, pos3];
-        this.storeField(time, positions, mindunits, field);
+        void this.storeField(time, positions, mindunits, field);
     }
 
 
@@ -215,7 +214,7 @@ export class FieldLogger {
             const x = fp[2].latE6;
             const y = fp[2].lngE6;
 
-            let distance = (py1 - py2) * x + (px2 - px1) * y + px1 * py2 - px2 * py1;
+            const distance = (py1 - py2) * x + (px2 - px1) * y + px1 * py2 - px2 * py1;
 
             if (distance < 0) {
                 if (distance < left_dist) {
@@ -340,7 +339,7 @@ export class FieldLogger {
         console.info(`-FIELD- ${mindunits}`);
         const myguid = this.pos2guid(position);
 
-        const old = await this.store.getItem(myguid) as StoredField;
+        const old: StoredField | null = await this.store.getItem(myguid);
         if (old) {
             console.assert(old.mus === mindunits, "MUS different");
             if (old.time >= time) return;
@@ -350,7 +349,7 @@ export class FieldLogger {
             this.onNewField(field, mindunits);
         }
 
-        this.store.setItem(myguid, {
+        await this.store.setItem(myguid, {
             time,
             mus: mindunits
         });
@@ -434,7 +433,8 @@ export class FieldLogger {
             return;
         }
 
-        const createMessage = otherCreateFieldLines[0]!;
+        const createMessage = otherCreateFieldLines[0]
+            ;
         const markup = createMessage[2].plext.markup;
         const mindunits = markup[4][0] === "TEXT" ? parseInt(markup[4][1].plain) : -1;
 
@@ -454,8 +454,8 @@ export class FieldLogger {
         for (const fguid in window.fields) {
             const points = window.fields[fguid].options.data.points;
 
-            for (var i in points) {
-                var point = points[i];
+            for (const i in points) {
+                const point = points[i];
                 if (point.latE6 == latE6 && point.lngE6 == lngE6) return point.guid;
             }
         }
