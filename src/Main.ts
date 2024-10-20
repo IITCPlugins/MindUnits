@@ -1,7 +1,7 @@
 import * as Plugin from "iitcpluginkit";
-import * as S2 from "./lib/s2";
-import { FieldLogger } from "./fieldLogger";
-import { MindunitsDB, Result as MUResult, S2MUDetailLevel, S2MULevel } from "./mindunitsDB";
+import * as S2 from "./lib/S2";
+import { FieldLogger } from "./FieldLogger";
+import { MindunitsDB, Result as MUResult, S2MUDetailLevel, S2MULevel } from "./MindunitsDB";
 import { DebugDialog } from "./ui/debugDialog";
 import myicon from "./ui/images/icon.svg";
 import { CSVExport } from "./lib/CSVExport";

@@ -1,5 +1,5 @@
 import { createSignal } from "solid-js";
-import * as S2 from "../lib/s2";
+import * as S2 from "../lib/S2";
 import { main } from "../Main";
 
 

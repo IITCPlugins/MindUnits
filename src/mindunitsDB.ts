@@ -1,5 +1,5 @@
-import { FieldLogger } from "./fieldLogger";
-import * as S2 from "./lib/s2";
+import { FieldLogger } from "./FieldLogger";
+import * as S2 from "./lib/S2";
 
 export const S2MULevel = 11;
 export const S2MUDetailLevel = 17;
