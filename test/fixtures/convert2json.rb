@@ -11,9 +11,13 @@ toObject = data.map do |row|
     { lat: row[2].to_f, lng: row[3].to_f },
     { lat: row[4].to_f, lng: row[5].to_f },
   ],
-   mu: row[6].to_i }
+    mu: row[6].to_i }
 end
 
-File.open("fields.json", "w") do |f|
-  f.write(toObject.to_json)
+split = toObject.shuffle.each_slice(toObject.length / 2)
+
+split.each_with_index do |selection, index|
+  File.open("fields_#{index + 1}.json", "w") do |f|
+    f.write(selection.to_json)
+  end
 end
