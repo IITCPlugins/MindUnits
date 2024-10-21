@@ -417,7 +417,9 @@ export class S2RegionCover {
             level_min++;
             currentCells = newCells;
         }
-        final.push(...currentCells);
+
+        // eslint-disable-next-line unicorn/prefer-spread -- spread operator can crash here ("too much fct args")
+        final = final.concat(currentCells);
 
         return final;
     }
