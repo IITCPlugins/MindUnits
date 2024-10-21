@@ -1,9 +1,7 @@
+/* eslint-disable unicorn/filename-case */
 import { FieldLogger } from "./FieldLogger";
 import * as S2 from "./lib/S2";
 
-export const S2MULevel = 11;
-export const S2MUDetailLevel = 17;
-const S2MUDetailFactor = Math.pow(4, S2MUDetailLevel - S2MULevel);
 const MAX_TRAIN_FACTOR = 0.9; // max influence a new field have on the S2 Value
 
 export interface Result {
@@ -18,9 +16,19 @@ export class MindunitsDB {
     private muDB: Map<string, number>;
     private muDBParents: Map<string, number>;
 
-    constructor() {
+    // options
+    private S2MULevel: number;
+    private S2MUDetailLevel: number;
+    private S2MUDetailFactor: number;
+
+    constructor(cell_level: number = 11, detail_level: number = 17) {
         this.muDB = new Map();
         this.muDBParents = new Map();
+
+        this.S2MULevel = cell_level;
+        this.S2MUDetailLevel = detail_level;
+        this.S2MUDetailFactor = Math.pow(4, this.S2MUDetailLevel - this.S2MULevel);
+
     }
 
 
@@ -36,7 +44,7 @@ export class MindunitsDB {
         console.timeEnd("logfield_train");
 
         console.time("logfield_train_approx");
-        this.calculateParents(this.muDB);
+        this.calculateTopFields();
         console.timeEnd("logfield_train_approx");
     }
 
@@ -45,15 +53,15 @@ export class MindunitsDB {
         const cover = new S2.S2RegionCover();
         const region = new S2.S2Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
 
-        const cells = cover.getCovering(region, S2MULevel, S2MULevel);
-        const detailCells = cells.map(cell => cover.howManyIntersect(region, cell, S2MUDetailLevel));
+        const cells = cover.getCovering(region, this.S2MULevel, this.S2MULevel);
+        const detailCells = cells.map(cell => cover.howManyIntersect(region, cell, this.S2MUDetailLevel));
         const total = detailCells.reduce((sum, x) => sum + x, 0);
 
         const mu_per_detail = mindunits / total;
 
         cells.forEach((cell, i) => {
             const id = cell.toString();
-            const mu = mu_per_detail * S2MUDetailFactor;
+            const mu = mu_per_detail * this.S2MUDetailFactor;
 
             if (this.muDB.has(id)) {
                 const current = this.muDB.get(id)!;
@@ -71,6 +79,9 @@ export class MindunitsDB {
         })
     }
 
+    calculateTopFields() {
+        this.calculateParents(this.muDB);
+    }
 
     private calculateParents(fields: Map<string, number>): void {
         // lets build approximate values for missing cell
@@ -106,7 +117,7 @@ export class MindunitsDB {
             const approx = munits.reduce((s, x) => s + x, 0) / munits.length * 4;
             parentValues.set(id, approx);
 
-            if (cell.level !== S2MULevel - 1 || munits.length !== 4) {
+            if (cell.level !== this.S2MULevel - 1 || munits.length !== 4) {
                 this.muDBParents.set(id, approx);
 
                 if (cell.level === 1) {
@@ -124,7 +135,7 @@ export class MindunitsDB {
         const cover = new S2.S2RegionCover();
         const region = new S2.S2Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
 
-        const cells = cover.getCovering(region, S2MULevel, S2MULevel);
+        const cells = cover.getCovering(region, this.S2MULevel, this.S2MULevel);
 
         const result = <Result>{
             mindunits: 0,
@@ -135,16 +146,16 @@ export class MindunitsDB {
 
         cells.forEach(cell => {
             const id = cell.toString();
-            const details = cover.howManyIntersect(region, cell, S2MUDetailLevel);
+            const details = cover.howManyIntersect(region, cell, this.S2MUDetailLevel);
             result.cells += details;
 
             const cellMU = this.muDB.get(id);
             if (cellMU) {
-                result.mindunits += cellMU * details / S2MUDetailFactor;
+                result.mindunits += cellMU * details / this.S2MUDetailFactor;
             } else {
                 const parentUnits = this.findParentUnits(cell);
                 if (parentUnits) {
-                    result.mindunits += parentUnits * details / S2MUDetailFactor;
+                    result.mindunits += parentUnits * details / this.S2MUDetailFactor;
                     result.approx += details;
                 } else {
                     result.missing += details;

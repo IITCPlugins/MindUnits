@@ -1,7 +1,7 @@
 import * as Plugin from "iitcpluginkit";
 import * as S2 from "./lib/S2";
 import { FieldLogger } from "./FieldLogger";
-import { MindunitsDB, Result as MUResult, S2MUDetailLevel, S2MULevel } from "./MindunitsDB";
+import { MindunitsDB, Result as MUResult } from "./MindunitsDB";
 import { DebugDialog } from "./ui/debugDialog";
 import myicon from "./ui/images/icon.svg";
 import { CSVExport } from "./lib/CSVExport";
@@ -9,6 +9,8 @@ import { CSVExport } from "./lib/CSVExport";
 
 const TOOLTIP_DELAY = 100;
 
+const S2MUDetailLevel = 17;
+const S2MULevel = 11;
 
 class LogFields implements Plugin.Class {
 
@@ -43,7 +45,7 @@ class LogFields implements Plugin.Class {
         this.layer = new L.LayerGroup();
         window.addLayerGroup("Field MUs", this.layer, false);
 
-        this.muDB = new MindunitsDB();
+        this.muDB = new MindunitsDB(S2MULevel, S2MUDetailLevel);
         this.hasTrained = false;
 
         $("#toolbox").append($("<a>", {
