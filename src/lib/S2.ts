@@ -316,6 +316,15 @@ export class S2Triangle extends S2Polyline {
 
     constructor(a: XYZ, b: XYZ, c: XYZ) {
         super([a, b, c, a]);
+
+        if (XYZEqual(this.points[0], this.points[1]) ||
+            XYZEqual(this.points[0], this.points[2]) ||
+            XYZEqual(this.points[1], this.points[2])) {
+            // triangle with equal corners = empty
+            this.points.length = 0;
+            return;
+        }
+
         this.center = [a[0] + b[0] + c[0], a[1] + b[1] + c[1], a[2] + b[2] + c[2]];
         this.centerSides = [
             det(this.center, a, b),
@@ -324,12 +333,9 @@ export class S2Triangle extends S2Polyline {
         ];
     }
 
-    empty() {
-        return XYZEqual(this.points[0], this.points[1]) ||
-            XYZEqual(this.points[0], this.points[2]) ||
-            XYZEqual(this.points[1], this.points[2]);
-    }
-
+    /**
+     * is the cell completly inside the regions
+     */
     contains(s: S2Cell) {
         const corners = s.getCornerXYZ();
         return corners.every(p => this.containsPoint(p));
