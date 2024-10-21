@@ -1,7 +1,7 @@
 /* eslint-disable no-bitwise */
 /* eslint-disable max-classes-per-file */
+export interface LatLng { lat: number; lng: number };
 type Face = 0 | 1 | 2 | 3 | 4 | 5;
-type LatLng = { lat: number; lng: number };
 type XYZ = [number, number, number];
 type UV = [number, number];
 type ST = [number, number];
@@ -26,6 +26,10 @@ export const XYZToLatLng = (xyz: XYZ): LatLng => {
     const lng = Math.atan2(xyz[1], xyz[0]);
 
     return { lat: lat * r2d, lng: lng * r2d };
+}
+
+const XYZEqual = (a: XYZ, b: XYZ): boolean => {
+    return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
 }
 
 const largestAbsComponent = (xyz: XYZ): 0 | 1 | 2 => {
@@ -305,7 +309,7 @@ export class S2Polyline implements S2Region {
     }
 }
 
-// Triangle in a single semisphere
+
 export class S2Triangle extends S2Polyline {
     center: XYZ;
     centerSides: [number, number, number];
@@ -321,7 +325,9 @@ export class S2Triangle extends S2Polyline {
     }
 
     empty() {
-        return false;
+        return XYZEqual(this.points[0], this.points[1]) ||
+            XYZEqual(this.points[0], this.points[2]) ||
+            XYZEqual(this.points[1], this.points[2]);
     }
 
     contains(s: S2Cell) {
