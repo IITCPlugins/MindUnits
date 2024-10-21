@@ -1,38 +1,53 @@
+import * as S2 from "../../src/lib/S2";
+
+
 describe("S2", () => {
 
-    it("should create a portal link", () => {
-        const pinfo: PortalInfo =
-        {
-            guid: "guid",
-            name: "myname",
-            description: "",
-            position: L.latLng(1, 1)
-        }
+    const fields: S2.LatLng[][] = [
+        [{ lat: 51.110770, lng: 7.204330 }, { lat: 50.945868, lng: 7.090983 }, { lat: 50.745500, lng: 7.501098 }], // 86732 Mus
+        [{ lat: 51.208804, lng: 7.194191 }, { lat: 51.204192, lng: 7.110999 }, { lat: 51.202797, lng: 7.166289 }],//  1642 mus
+    ];
 
-        const link = UiHelper.getPortalLink(pinfo) as HTMLAnchorElement;
-        expect(link.tagName).toBe("A"); // is a link
-        expect(link.textContent).toBe("myname"); // got portal name
-        expect(link.href.length).toBeGreaterThan(0); // has a link
+    it("should find covering cell", () => {
+
+        const cover = new S2.S2RegionCover();
+        const region = new S2.S2Triangle(
+            S2.LatLngToXYZ(fields[1][0]),
+            S2.LatLngToXYZ(fields[1][1]),
+            S2.LatLngToXYZ(fields[1][2]));
+
+
+        const cells = cover.getCovering(region, 11, 11);
+
+        const ids = cells.map(c => c.toString()).join(";");
+        expect(ids).toBe('2[161,879]11;2[161,880]11;2[161,881]11');
     });
 
 
-    it("should find a OP portal near pos", () => {
+    it("should find covering cell starting higher", () => {
+        const cover = new S2.S2RegionCover();
+        const region = new S2.S2Triangle(
+            S2.LatLngToXYZ(fields[1][0]),
+            S2.LatLngToXYZ(fields[1][1]),
+            S2.LatLngToXYZ(fields[1][2]));
 
-        createOP();
-        const portal = UiHelper.findPortalNearPos(L.latLng(1, 1), Infinity);
 
-        expect(portal).not.toBeDefined();
+        const cells = cover.getCovering(region, 10, 11);
+
+        const ids = cells.map(c => c.toString()).join(";");
+        expect(ids).toBe('2[161,879]11;2[161,880]11;2[161,881]11');
     });
 
+    it("should accept empty fields", () => {
 
-    it("should convert distance to string", () => {
+        const cover = new S2.S2RegionCover();
+        const region = new S2.S2Triangle(
+            S2.LatLngToXYZ(fields[1][0]),
+            S2.LatLngToXYZ(fields[1][0]),
+            S2.LatLngToXYZ(fields[1][0]));
 
-        expect(UiHelper.formatDistance(1.2)).toBe("1.2m");
-        expect(UiHelper.formatDistance(500.4)).toBe("500m");
-        expect(UiHelper.formatDistance(1500)).toBe("1.5km");
-        expect(UiHelper.formatDistance(123456)).toBe("123km");
+
+        const cells = cover.getCovering(region, 11, 11);
+        expect(cells.length).toBe(0);
     });
-
 })
-
-
