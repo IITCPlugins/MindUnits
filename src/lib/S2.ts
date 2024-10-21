@@ -289,8 +289,10 @@ export class S2Polyline implements S2Region {
     mayIntersect(s: S2Cell): boolean {
         if (this.empty()) return false;
 
-        for (const point of this.points) if (s.contains(point)) return true;
+        // atleast point is inside the cell
+        if (this.points.some(point => s.contains(point))) return true;
 
+        // or one line is crossing the cell border
         const corners = s.getCornerXYZ();
         for (let i = this.points.length - 1; i > 0; i--) {
             if (
@@ -350,7 +352,10 @@ export class S2Triangle extends S2Polyline {
     }
 
     /**
-     * @returhn true if atleast one corner is inside the region
+     * true if the cell is touched
+     * a) one corner is inside this region
+     * b) one of the region point is inside the region
+     * c) one of the line crosses the border
      */
     mayIntersect(s: S2Cell) {
         if (super.mayIntersect(s)) return true;
@@ -375,6 +380,7 @@ export class S2RegionCover {
         const frontier = new Set<string>();
         const stack = [start];
         frontier.add(start.toString());
+
         while (stack.length > 0) {
             const s = stack.pop()!;
             if (!this.region.mayIntersect(s)) continue;
@@ -400,7 +406,7 @@ export class S2RegionCover {
 
         let currentCells = this.getCoveringFromCell(this.getCoveringPoint(this.region.points[0], level_min));
 
-        const final: S2Cell[] = [];
+        let final: S2Cell[] = [];
         while (level_min < level_max && currentCells.length > 0) {
             const newCells: S2Cell[] = [];
             currentCells.forEach(cell => {
