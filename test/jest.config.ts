@@ -21,7 +21,6 @@ const config: Config = {
     collectCoverageFrom: ["./src/**"],
     coverageReporters: ['html'],
     coverageDirectory: './dist/coverage'
-
 };
 
 export default config;
