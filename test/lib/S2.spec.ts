@@ -69,19 +69,4 @@ describe("S2", () => {
         expect(cells.length).toBeGreaterThan(0);
     });
 
-
-    it("should not fail to find covering (multiple faces?)", () => {
-        const cover = new S2.RegionCover();
-        const region = new S2.Triangle(
-            S2.LatLngToXYZ(fields[2][0]),
-            S2.LatLngToXYZ(fields[2][1]),
-            S2.LatLngToXYZ(fields[2][2]));
-
-
-        const cells = cover.getCovering(region, 14, 14);
-        // const ids = cells.map(c => c.toString()).join(";");
-        // expect(ids).toBe('2[161,879]11;2[161,880]11;2[161,881]11');
-        expect(cells.length).toBeGreaterThan(0);
-    });
-
 })

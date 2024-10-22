@@ -49,7 +49,7 @@ describe("MindunitsDB", () => {
     })
 
 
-    it.skip("should train", () => {
+    it("should train", () => {
         const db = new MindunitsDB()
 
 
@@ -63,7 +63,8 @@ describe("MindunitsDB", () => {
             expect(db.getNumberOfCells()).toBeGreaterThan(0);
 
             const error = calculateError(db, fieldData2);
-            // console.error(`${i + 1}. Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
+            if (i == 9)
+                console.error(`${i + 1}. Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
             // console.error(`Error_Approx: ${error.result[ResultType.APPROX]}  (n=${error.count[ResultType.APPROX]})`);
             // console.error(`Error_Miss:   ${error.result[ResultType.MISSING]}  (n=${error.count[ResultType.MISSING]})`);
             expect(error.result[ResultType.ALL_CELLS]).toBeGreaterThan(0);
@@ -75,21 +76,19 @@ describe("MindunitsDB", () => {
         const db = new MindunitsDB(14, 17);
 
 
-        for (let i = 0; i < 1; i++) {
+        for (let i = 0; i < 10; i++) {
 
             fieldData1.forEach(d => {
-                console.log("Field: ", d.points);
                 db.trainField(d.points.map(l => L.latLng(l)), d.mu);
             })
-            console.log("calculateTopFields");
             db.calculateTopFields();
 
 
             expect(db.getNumberOfCells()).toBeGreaterThan(0);
 
-            console.log("calculate Error");
             const error = calculateError(db, fieldData2);
-            console.error(`${i + 1}. Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
+            if (i == 9)
+                console.error(`${i + 1}. Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
             // console.error(`Error_Approx: ${error.result[ResultType.APPROX]}  (n=${error.count[ResultType.APPROX]})`);
             // console.error(`Error_Miss:   ${error.result[ResultType.MISSING]}  (n=${error.count[ResultType.MISSING]})`);
         }
