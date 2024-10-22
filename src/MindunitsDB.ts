@@ -32,6 +32,9 @@ export class MindunitsDB {
     }
 
 
+    /**
+     * train fields from Logger
+     */
     async train(fieldLog: FieldLogger): Promise<void> {
         console.time("logfield_train");
         let count = 0;
@@ -49,9 +52,12 @@ export class MindunitsDB {
     }
 
 
+    /**
+     * train one field
+     */
     trainField(ll: L.LatLng[], mindunits: number): void {
-        const cover = new S2.S2RegionCover();
-        const region = new S2.S2Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
+        const cover = new S2.RegionCover();
+        const region = new S2.Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
 
         const cells = cover.getCovering(region, this.S2MULevel, this.S2MULevel);
         const detailCells = cells.map(cell => cover.howManyIntersect(region, cell, this.S2MUDetailLevel));
@@ -79,6 +85,10 @@ export class MindunitsDB {
         })
     }
 
+
+    /**
+     * train one field
+     */
     calculateTopFields() {
         this.calculateParents(this.muDB);
     }
@@ -92,14 +102,14 @@ export class MindunitsDB {
 
         const first = fields.keys().next();
         const firstCellID = first.value as string;
-        const cell = S2.S2Cell.fromString(firstCellID);
+        const cell = S2.Cell.fromString(firstCellID);
 
         if (cell.level === 1) return;
 
 
         const parents = new Map<string, number[]>();
         fields.forEach((mindunits, id) => {
-            const cell = S2.S2Cell.fromString(id);
+            const cell = S2.Cell.fromString(id);
             const parent = cell.getParent();
             const parent_id = parent!.toString();
 
@@ -132,8 +142,8 @@ export class MindunitsDB {
 
 
     calcMU(ll: L.LatLng[]): Result {
-        const cover = new S2.S2RegionCover();
-        const region = new S2.S2Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
+        const cover = new S2.RegionCover();
+        const region = new S2.Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
 
         const cells = cover.getCovering(region, this.S2MULevel, this.S2MULevel);
 
@@ -167,7 +177,7 @@ export class MindunitsDB {
         return result;
     }
 
-    private findParentUnits(cell: S2.S2Cell): number | undefined {
+    private findParentUnits(cell: S2.Cell): number | undefined {
         const parent = cell.getParent();
         if (!parent) return undefined;
         let parentUnits = this.muDBParents.get(parent.toString());
@@ -178,9 +188,9 @@ export class MindunitsDB {
     }
 
 
-    forEach(callback: (cell: S2.S2Cell, mindunits: number) => void): void {
+    forEach(callback: (cell: S2.Cell, mindunits: number) => void): void {
         this.muDB.forEach((mindunits, guid) => {
-            const cell = S2.S2Cell.fromString(guid);
+            const cell = S2.Cell.fromString(guid);
             callback(cell, mindunits);
         })
     }

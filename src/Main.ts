@@ -296,8 +296,8 @@ class LogFields implements Plugin.Class {
 
         const ll = field.getLatLngs();
 
-        const cover = new S2.S2RegionCover();
-        const region = new S2.S2Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
+        const cover = new S2.RegionCover();
+        const region = new S2.Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
         const cells = cover.getCovering(region, S2MULevel, S2MUDetailLevel);
 
         if (cells.length === 0) {

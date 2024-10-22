@@ -11,8 +11,8 @@ describe("S2", () => {
 
     it("should find covering cell", () => {
 
-        const cover = new S2.S2RegionCover();
-        const region = new S2.S2Triangle(
+        const cover = new S2.RegionCover();
+        const region = new S2.Triangle(
             S2.LatLngToXYZ(fields[1][0]),
             S2.LatLngToXYZ(fields[1][1]),
             S2.LatLngToXYZ(fields[1][2]));
@@ -26,8 +26,8 @@ describe("S2", () => {
 
 
     it("should find covering cell starting higher", () => {
-        const cover = new S2.S2RegionCover();
-        const region = new S2.S2Triangle(
+        const cover = new S2.RegionCover();
+        const region = new S2.Triangle(
             S2.LatLngToXYZ(fields[1][0]),
             S2.LatLngToXYZ(fields[1][1]),
             S2.LatLngToXYZ(fields[1][2]));
@@ -42,8 +42,8 @@ describe("S2", () => {
 
     it("should accept empty fields", () => {
 
-        const cover = new S2.S2RegionCover();
-        const region = new S2.S2Triangle(
+        const cover = new S2.RegionCover();
+        const region = new S2.Triangle(
             S2.LatLngToXYZ(fields[1][0]),
             S2.LatLngToXYZ(fields[1][0]),
             S2.LatLngToXYZ(fields[1][0]));
@@ -55,8 +55,8 @@ describe("S2", () => {
 
 
     it("should not fail to find covering (multiple faces?)", () => {
-        const cover = new S2.S2RegionCover();
-        const region = new S2.S2Triangle(
+        const cover = new S2.RegionCover();
+        const region = new S2.Triangle(
             S2.LatLngToXYZ(fields[2][0]),
             S2.LatLngToXYZ(fields[2][1]),
             S2.LatLngToXYZ(fields[2][2]));
@@ -71,8 +71,8 @@ describe("S2", () => {
 
 
     it("should not fail to find covering (multiple faces?)", () => {
-        const cover = new S2.S2RegionCover();
-        const region = new S2.S2Triangle(
+        const cover = new S2.RegionCover();
+        const region = new S2.Triangle(
             S2.LatLngToXYZ(fields[2][0]),
             S2.LatLngToXYZ(fields[2][1]),
             S2.LatLngToXYZ(fields[2][2]));
