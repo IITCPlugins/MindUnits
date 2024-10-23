@@ -27,7 +27,8 @@ const calculateError = (db: MindunitsDB, fields: JSONData): ErrorResult => {
             result.approx > 0 ? ResultType.APPROX :
                 ResultType.ALL_CELLS
 
-        const error = result.mindunits / d.mu;
+        const error = result.mindunits - d.mu;
+        // const error = 1 - (result.mindunits / d.mu);
         r.count[type]++;
         r.result[type] += error * error;
     })
@@ -52,25 +53,47 @@ describe("MindunitsDB", () => {
     it("should train", () => {
         const db = new MindunitsDB()
 
-
         for (let i = 0; i < 1; i++) {
-
             fieldData1.forEach(d => {
                 db.trainField(d.points.map(l => L.latLng(l)), d.mu);
             })
-            db.calculateTopFields();
-
-            expect(db.getNumberOfCells()).toBeGreaterThan(0);
-
-            const error = calculateError(db, fieldData2);
-            if (i == 9)
-                console.error(`${i + 1}. Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
-            // console.error(`Error_Approx: ${error.result[ResultType.APPROX]}  (n=${error.count[ResultType.APPROX]})`);
-            // console.error(`Error_Miss:   ${error.result[ResultType.MISSING]}  (n=${error.count[ResultType.MISSING]})`);
-            expect(error.result[ResultType.ALL_CELLS]).toBeGreaterThan(0);
+            // const error = calculateError(db, fieldData2);
+            //console.log(`a${i + 1}. Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
         }
+        // db.calculateTopFields();
+
+        expect(db.getNumberOfCells()).toBeGreaterThan(0);
+
+        const error = calculateError(db, fieldData2);
+        console.log(`Train1 Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
+        expect(error.result[ResultType.ALL_CELLS]).toBeGreaterThan(0);
     })
 
+
+    it("should train2", () => {
+        const db = new MindunitsDB()
+
+        for (let i = 0; i < 1; i++) {
+            fieldData1.forEach(d => {
+                db.trainField2(d.points.map(l => L.latLng(l)), d.mu);
+            })
+            // const error = calculateError(db, fieldData2);
+            // console.log(`b${i + 1}. Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
+        }
+        // db.calculateTopFields();
+
+        expect(db.getNumberOfCells()).toBeGreaterThan(0);
+
+        const error = calculateError(db, fieldData2);
+        console.log(`Train2 Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
+        expect(error.result[ResultType.ALL_CELLS]).toBeGreaterThan(0);
+    })
+
+    it("should learn a field with train2", () => {
+        const db = new MindunitsDB()
+        db.trainField2(fieldData1[0].points.map(l => L.latLng(l)), fieldData1[0].mu);
+        expect(db.getNumberOfCells()).toBeGreaterThan(0);
+    })
 
     it.skip("should train highlevel", () => {
         const db = new MindunitsDB(14, 17);
@@ -88,7 +111,7 @@ describe("MindunitsDB", () => {
 
             const error = calculateError(db, fieldData2);
             if (i == 9)
-                console.error(`${i + 1}. Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
+                console.log(`${i + 1}. Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
             // console.error(`Error_Approx: ${error.result[ResultType.APPROX]}  (n=${error.count[ResultType.APPROX]})`);
             // console.error(`Error_Miss:   ${error.result[ResultType.MISSING]}  (n=${error.count[ResultType.MISSING]})`);
         }

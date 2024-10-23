@@ -13,7 +13,7 @@ export interface Result {
 
 export class MindunitsDB {
 
-    private muDB: Map<string, number>;
+    public muDB: Map<string, number>; // FIXME: public for debug
     private muDBParents: Map<string, number>;
 
     // options
@@ -38,12 +38,12 @@ export class MindunitsDB {
     async train(fieldLog: FieldLogger): Promise<void> {
         console.time("logfield_train");
         let count = 0;
-        let skip = 2;
+        let skip = 0;
         // DEBUG-START
         // we train only every second field to get a better "error" value
         skip = 1;
         // DEBUG-END
-        await fieldLog.forEach((latlngs, mindunits) => { if ((count++ % skip) === 0) this.trainField(latlngs, mindunits) });
+        await fieldLog.forEach((latlngs, mindunits) => { if ((count++ % skip) === 0) this.trainField2(latlngs, mindunits) });
         console.timeEnd("logfield_train");
 
         console.time("logfield_train_approx");
@@ -64,27 +64,73 @@ export class MindunitsDB {
         const total = detailCells.reduce((sum, x) => sum + x, 0);
 
         const mu_per_detail = mindunits / total;
+        const mu_per_cell = mu_per_detail * this.S2MUDetailFactor;
 
         cells.forEach((cell, i) => {
             const id = cell.toString();
-            const mu = mu_per_detail * this.S2MUDetailFactor;
 
             if (this.muDB.has(id)) {
                 const current = this.muDB.get(id)!;
-                if (current !== mu) {
+                if (current !== mu_per_cell) {
 
                     let w = detailCells[i] / total;
                     console.assert(w > 0 && w <= 1, "illegal percent value")
 
                     w = Math.min(w, MAX_TRAIN_FACTOR);
-                    this.muDB.set(id, (1 - w) * current + w * mu);
+                    this.muDB.set(id, (1 - w) * current + w * mu_per_cell);
                 }
             } else {
-                this.muDB.set(id, mu);
+                this.muDB.set(id, mu_per_cell);
             }
         })
     }
 
+
+    /**
+     * train one field
+     */
+    trainField2(ll: L.LatLng[], mindunits: number): void {
+        const cover = new S2.RegionCover();
+        const region = new S2.Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
+
+        const cells = cover.getCovering(region, this.S2MULevel, this.S2MULevel);
+        const detailCells = cells.map(cell => cover.howManyIntersect(region, cell, this.S2MUDetailLevel));
+        const cellsIDs = cells.map(id => id.toString());
+        const total = detailCells.reduce((sum, x) => sum + x, 0);
+
+        const mu_per_detail = mindunits / total;
+        const mu_per_cell = mu_per_detail * this.S2MUDetailFactor;
+        const isAnyMissing = cellsIDs.some(id => !this.muDB.has(id));
+
+        if (isAnyMissing) {
+            cellsIDs.forEach(id => {
+                if (this.muDB.has(id)) {
+                    const current = (this.muDB.get(id)! + mu_per_cell) / 2;
+                    this.muDB.set(id, current);
+                } else {
+                    this.muDB.set(id, mu_per_cell);
+                }
+            })
+        } else {
+            const current_mu = cellsIDs.reduce((mu, id, i) => mu + this.muDB.get(id)! * detailCells[i] / this.S2MUDetailFactor, 0);
+            const mu_diff_per_detail = (mindunits - current_mu) / total;
+            cellsIDs.forEach((id, i) => {
+                console.assert(this.muDB.has(id));
+
+                const delta = mu_diff_per_detail * detailCells[i] / total
+                const current = this.muDB.get(id)! + delta;
+                this.muDB.set(id, current);
+            })
+        }
+
+        //  - - - 
+        //  1. 1000Mu Left        -> 500 500 -     
+        //  1. 500Mu Right        -> 500 375 250
+        //  2. 1000Mu Left +125   -> 562 437 250    
+        //  2. 500Mu Right -187   -> 562 344 157
+        //  3. 1000Mu Left +94    -> 609 435 157
+        //  3. 500Mu Right -92    -> 609 389 203
+    }
 
     /**
      * train one field
