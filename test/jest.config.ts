@@ -20,7 +20,8 @@ const config: Config = {
     collectCoverage: false,
     collectCoverageFrom: ["./src/**"],
     coverageReporters: ['html'],
-    coverageDirectory: './dist/coverage'
+    coverageDirectory: './dist/coverage',
+    reporters: ["jest-console-group-reporter"],
 };
 
 export default config;
