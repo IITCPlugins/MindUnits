@@ -69,4 +69,28 @@ describe("S2", () => {
         expect(cells.length).toBeGreaterThan(0);
     });
 
+
+    it("should convert to string and vice-versa", () => {
+        const cell = S2.Cell.FromLatLng(fields[0][0], 14);
+
+        const asStr = cell.toString();
+        expect(asStr).toBe("202212213331323");
+        expect(asStr.length).toBe(14 + 1);
+
+        const cell2 = S2.Cell.fromString(asStr);
+        expect(cell2.equal(cell)).toBeTruthy();
+    });
+
+    it("should all parents start with the same string_id", () => {
+        const cell = S2.Cell.FromLatLng(fields[0][0], 14);
+
+        const asStr = cell.toString();
+
+        for (let i = 13; i < 1; i--) {
+            const parent = cell.getParent();
+            expect(parent!.toString()).toEqual(asStr.slice(0, i + 1));
+        }
+    });
+
+
 })

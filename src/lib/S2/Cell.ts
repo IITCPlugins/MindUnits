@@ -1,3 +1,4 @@
+/* eslint-disable unicorn/prefer-code-point */
 import { Face, IJ, Level, UV, LatLng, XYZ } from ".";
 import { LatLngToXYZ, XYZToFaceUV, UVToST, STToIJ, STToUV, IJToST, hilbertQuadListToPoint, FaceUVToXYZ, XYZToLatLng, pointToHilbertQuadList } from "./Math";
 
@@ -43,21 +44,62 @@ export class Cell {
         return Cell.FromFaceIJ(face, ij, position.length);
     }
 
-
     static fromString(code: string): Cell {
-        const m = /(?<face>\d+)\[(?<i>\d+),(?<j>\d+)\](?<level>\d+)/.exec(code);
-        if (!m?.groups) {
+        if (!code) {
             throw new Error(`Invalid cell code: ${code}`);
         }
 
-        const g = m.groups;
-        return Cell.FromFaceIJ(Number(g.face) as Face, [Number(g.i), Number(g.j)], Number(g.level));
+        const nullchar = "0".charCodeAt(0);
+        const numbers: number[] = [...code].map(i => i.charCodeAt(0) - nullchar);
+        const face = numbers.shift() as Face;
+        const level = numbers.length;
+        let i = 0;
+        let j = 0;
+        numbers.forEach(v => {
+            i = (i << 1) + (v & 1);
+            j = (j << 1) + (v >> 1);
+        });
+
+        return Cell.FromFaceIJ(face, [i, j], level);
     }
 
-    toString() {
-        return `${this.face}[${this.ij[0]},${this.ij[1]}]${this.level}`;
+    /**
+     * @return Cell-ID as string
+     * Note: this is not related to Google-S2-CellID
+     * we skip most 64bit arithmetic and skip the hilbertcurve 
+     */
+    toString(level?: number): string {
+        const numbers: number[] = [this.face];
+
+        level ??= this.level;
+        let bit = 1 << (level - 1);
+        while (bit) {
+            numbers.push(((this.ij[0] & bit) ? 1 : 0) + ((this.ij[1] & bit) ? 2 : 0));
+            bit >>= 1;
+        }
+        return numbers.join("");
     }
 
+
+    toArrayIndex(baseLevel: number): number {
+        let index = 0;
+        const level = this.level - baseLevel;
+        let bit = 1 << (level - 1);
+        while (bit) {
+            index += ((this.ij[0] & bit) ? 1 : 0) + ((this.ij[1] & bit) ? 2 : 0);
+            bit >>= 1;
+        }
+        return index;
+    }
+
+    maxArrayIndex(baseLevel: number, maxLevel: number): number {
+        return Math.pow(4, maxLevel - baseLevel);
+    }
+
+
+    equal(b: Cell): boolean {
+        return this.face === b.face && this.ij[0] === b.ij[0] && this.ij[1] === b.ij[1] && this.level === b.level;
+    }
 
     contains(xyz: XYZ) {
         const [face, uv] = XYZToFaceUV(xyz);

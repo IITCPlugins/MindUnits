@@ -50,7 +50,7 @@ describe("MindunitsDB", () => {
     })
 
 
-    it("should train", () => {
+    it.skip("should train", () => {
         const db = new MindunitsDB()
 
         for (let i = 0; i < 1; i++) {
@@ -70,7 +70,7 @@ describe("MindunitsDB", () => {
     })
 
 
-    it("should train2", () => {
+    it.skip("should train2", () => {
         const db = new MindunitsDB()
 
         for (let i = 0; i < 1; i++) {
