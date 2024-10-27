@@ -3,6 +3,11 @@ require "json"
 
 allData = []
 
+Dir.glob("fields*.json").each do |fname|
+  data = JSON.parse(File.read(fname))
+  allData += data
+end
+
 Dir.glob("fields*.csv").each do |fname|
   data = CSV.read(fname, headers: true)
 
@@ -18,7 +23,13 @@ Dir.glob("fields*.csv").each do |fname|
   allData += toObject
 end
 
-split = allData.shuffle.each_slice((allData.length / 2.0).ceil)
+filtered = allData.uniq { |x| x["points"].to_json }
+removed = allData.length - filtered.length
+if removed > 0
+  puts "#{removed} duplicate(s) removed"
+end
+
+split = filtered.shuffle.each_slice((allData.length / 2.0).ceil)
 
 split.each_with_index do |selection, index|
   File.open("fields_#{index + 1}.json", "w") do |f|
