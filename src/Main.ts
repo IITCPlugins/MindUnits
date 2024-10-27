@@ -1,7 +1,7 @@
 import * as Plugin from "iitcpluginkit";
 import * as S2 from "./lib/S2";
 import { FieldLogger } from "./FieldLogger";
-import { MindunitsDB, Result as MUResult } from "./MindunitsDB";
+import { MindunitsDB, Result as MUResult } from "./Mindunits";
 import { DebugDialog } from "./ui/debugDialog";
 import myicon from "./ui/images/icon.svg";
 import { CSVExport } from "./lib/CSVExport";
@@ -386,28 +386,6 @@ class LogFields implements Plugin.Class {
             this.tooltip = undefined;
             this.clearS2Cells();
         }
-    }
-
-    async exportError() {
-
-        const data: any[] = [];
-
-        await this.fieldLog.forEach((ll, mindunits) => {
-            const calc = this.muDB.calcMU(ll);
-            const diff = Math.abs(calc.mindunits - mindunits);
-
-            data.push({
-                mu: mindunits,
-                calculated: calc.mindunits,
-                cells: calc.cells,
-                missing: calc.missing,
-                approx: calc.approx,
-                difference: diff
-            })
-        })
-
-        const file = new CSVExport<any>(data, { name: "field_error" });
-        file.save();
     }
 
     async exportFields() {
