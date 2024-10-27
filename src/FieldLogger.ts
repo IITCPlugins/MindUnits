@@ -42,7 +42,7 @@ export class FieldLogger {
         return this.store.iterate((data: StoredField, guid) => {
 
             const positions = this.guid2pos(guid);
-            const latlngs = positions.map(p => L.latLng(p[0] * 1e-6, p[1] * 1e-6));
+            const latlngs = positions.map(p => L.latLng(p[0] / 1e6, p[1] / 1e6));
             if (latlngs.length !== 3) return;
 
             callback(latlngs, data.mus);
@@ -57,7 +57,6 @@ export class FieldLogger {
 
             const isField = this.isControlFieldMessage(chatLine[2].plext.markup);
             if (isField) {
-
                 const guid = chatLine[0];
                 const time = chatLine[1];
                 const atPosition: Position = isField.position;
@@ -112,6 +111,7 @@ export class FieldLogger {
     private async onCreatedFieldMsg(relatedChats: Intel.ChatLine[], time: number, mindunits: number, pos1: Position, agent: string) {
 
         if (mindunits < MINIMUM_MUS) {
+            console.debug("not enough MUs:", mindunits);
             return;
         }
 
@@ -164,11 +164,12 @@ export class FieldLogger {
         // Fallback -> search links
         const pos3 = this.findThirdPortal(pos1, pos2);
         if (!pos3) {
-            // console.debug("LogField: third portal not found");
+            console.debug("LogField: third portal not found");
             return;
         }
 
         const positions = [pos1, pos2, pos3];
+        console.debug("storeField, MUs", mindunits);
         await this.storeField(time, positions, mindunits, this.findField(positions));
     }
 

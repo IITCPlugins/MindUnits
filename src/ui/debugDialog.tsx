@@ -34,9 +34,8 @@ const DebugDialogContent = () => {
         >
             <button onClick={() => renderFields.show()}>Show known fields</button>
         </Show ><br />
-        <button onClick={() => main.train(true)}>Train</button><br/>
+        <button onClick={() => main.train(true)}>Train</button><br />
         <hr></hr>
-        <button onClick={() => main.exportError()}>Export ErrorList</button><br />
         <button onClick={() => main.exportFields()}>Export FieldList</button><br />
     </>)
 }

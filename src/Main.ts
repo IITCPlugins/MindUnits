@@ -1,7 +1,7 @@
 import * as Plugin from "iitcpluginkit";
-import * as S2 from "./lib/s2";
-import { FieldLogger } from "./fieldLogger";
-import { MindunitsDB, Result as MUResult, S2MUDetailLevel, S2MULevel } from "./mindunitsDB";
+import * as S2 from "./lib/S2";
+import { FieldLogger } from "./FieldLogger";
+import { MindunitsDB, Result as MUResult } from "./Mindunits";
 import { DebugDialog } from "./ui/debugDialog";
 import myicon from "./ui/images/icon.svg";
 import { CSVExport } from "./lib/CSVExport";
@@ -9,6 +9,8 @@ import { CSVExport } from "./lib/CSVExport";
 
 const TOOLTIP_DELAY = 100;
 
+const S2MUDetailLevel = 17;
+const S2MULevel = 11;
 
 class LogFields implements Plugin.Class {
 
@@ -43,7 +45,7 @@ class LogFields implements Plugin.Class {
         this.layer = new L.LayerGroup();
         window.addLayerGroup("Field MUs", this.layer, false);
 
-        this.muDB = new MindunitsDB();
+        this.muDB = new MindunitsDB(S2MULevel, S2MUDetailLevel);
         this.hasTrained = false;
 
         $("#toolbox").append($("<a>", {
@@ -294,8 +296,8 @@ class LogFields implements Plugin.Class {
 
         const ll = field.getLatLngs();
 
-        const cover = new S2.S2RegionCover();
-        const region = new S2.S2Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
+        const cover = new S2.RegionCover();
+        const region = new S2.Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
         const cells = cover.getCovering(region, S2MULevel, S2MUDetailLevel);
 
         if (cells.length === 0) {
@@ -384,28 +386,6 @@ class LogFields implements Plugin.Class {
             this.tooltip = undefined;
             this.clearS2Cells();
         }
-    }
-
-    async exportError() {
-
-        const data: any[] = [];
-
-        await this.fieldLog.forEach((ll, mindunits) => {
-            const calc = this.muDB.calcMU(ll);
-            const diff = Math.abs(calc.mindunits - mindunits);
-
-            data.push({
-                mu: mindunits,
-                calculated: calc.mindunits,
-                cells: calc.cells,
-                missing: calc.missing,
-                approx: calc.approx,
-                difference: diff
-            })
-        })
-
-        const file = new CSVExport<any>(data, { name: "field_error" });
-        file.save();
     }
 
     async exportFields() {
