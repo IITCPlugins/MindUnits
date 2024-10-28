@@ -1,4 +1,4 @@
-/* eslint-disable unicorn/filename-case */
+import { DensityMap } from "./DensityMap";
 import { FieldLogger } from "./FieldLogger";
 import * as S2 from "./lib/S2";
 
@@ -13,8 +13,7 @@ export interface Result {
 
 export class Mindunits {
 
-    public muDB: Map<string, number>; // FIXME: public for debug
-    private muDBParents: Map<string, number>;
+    private densityMap: DensityMap;
 
     // options
     private S2MULevel: number;
@@ -22,8 +21,7 @@ export class Mindunits {
     private S2MUDetailFactor: number;
 
     constructor(cell_level: number = 11, detail_level: number = 17) {
-        this.muDB = new Map();
-        this.muDBParents = new Map();
+        this.densityMap = new DensityMap(cell_level - 4, cell_level);
 
         this.S2MULevel = cell_level;
         this.S2MUDetailLevel = detail_level;
@@ -37,14 +35,10 @@ export class Mindunits {
      */
     async train(fieldLog: FieldLogger): Promise<void> {
         console.time("logfield_train");
-        let count = 0;
-        let skip = 0;
-        // DEBUG-START
-        // we train only every second field to get a better "error" value
-        skip = 1;
-        // DEBUG-END
-        await fieldLog.forEach((latlngs, mindunits) => { if ((count++ % skip) === 0) this.trainField2(latlngs, mindunits) });
+        await fieldLog.forEach(async (latlngs, mindunits) => await this.trainField(latlngs, mindunits));
         console.timeEnd("logfield_train");
+
+        this.densityMap.flush();
 
         console.time("logfield_train_approx");
         this.calculateTopFields();
@@ -52,48 +46,18 @@ export class Mindunits {
     }
 
 
-    /**
-     * train one field
-     */
-    trainField(ll: L.LatLng[], mindunits: number): void {
-        const cover = new S2.RegionCover();
-        const region = new S2.Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
-
-        const cells = cover.getCovering(region, this.S2MULevel, this.S2MULevel);
-        const detailCells = cells.map(cell => cover.howManyIntersect(region, cell, this.S2MUDetailLevel));
-        const total = detailCells.reduce((sum, x) => sum + x, 0);
-
-        const mu_per_detail = mindunits / total;
-        const mu_per_cell = mu_per_detail * this.S2MUDetailFactor;
-
-        cells.forEach((cell, i) => {
-            const id = cell.toString();
-
-            if (this.muDB.has(id)) {
-                const current = this.muDB.get(id)!;
-                if (current !== mu_per_cell) {
-
-                    let w = detailCells[i] / total;
-                    console.assert(w > 0 && w <= 1, "illegal percent value")
-
-                    w = Math.min(w, MAX_TRAIN_FACTOR);
-                    this.muDB.set(id, (1 - w) * current + w * mu_per_cell);
-                }
-            } else {
-                this.muDB.set(id, mu_per_cell);
-            }
-        })
-    }
-
 
     /**
      * train one field
      */
-    trainField2(ll: L.LatLng[], mindunits: number): void {
+    async trainField(ll: L.LatLng[], mindunits: number): Promise<void> {
         const cover = new S2.RegionCover();
         const region = new S2.Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
 
         const cells = cover.getCovering(region, this.S2MULevel, this.S2MULevel);
+        const cellValues = await this.densityMap.getCellsValues(cells);
+
+
         const detailCells = cells.map(cell => cover.howManyIntersect(region, cell, this.S2MUDetailLevel));
         const cellsIDs = cells.map(id => id.toString());
         const total = detailCells.reduce((sum, x) => sum + x, 0);
