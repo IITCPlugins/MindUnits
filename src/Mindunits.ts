@@ -11,7 +11,7 @@ export interface Result {
     approx: number;
 }
 
-export class MindunitsDB {
+export class Mindunits {
 
     public muDB: Map<string, number>; // FIXME: public for debug
     private muDBParents: Map<string, number>;

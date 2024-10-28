@@ -1,7 +1,7 @@
 import * as Plugin from "iitcpluginkit";
 import * as S2 from "./lib/S2";
 import { FieldLogger } from "./FieldLogger";
-import { MindunitsDB, Result as MUResult } from "./Mindunits";
+import { Mindunits, Result as MUResult } from "./Mindunits";
 import { DebugDialog } from "./ui/debugDialog";
 import myicon from "./ui/images/icon.svg";
 import { CSVExport } from "./lib/CSVExport";
@@ -15,7 +15,7 @@ const S2MULevel = 11;
 class LogFields implements Plugin.Class {
 
     public fieldLog: FieldLogger;
-    public muDB: MindunitsDB;
+    public muDB: Mindunits;
 
     private layer: L.LayerGroup<any>;
     private mustrings = new Map<string, L.Marker>();
@@ -45,7 +45,7 @@ class LogFields implements Plugin.Class {
         this.layer = new L.LayerGroup();
         window.addLayerGroup("Field MUs", this.layer, false);
 
-        this.muDB = new MindunitsDB(S2MULevel, S2MUDetailLevel);
+        this.muDB = new Mindunits(S2MULevel, S2MUDetailLevel);
         this.hasTrained = false;
 
         $("#toolbox").append($("<a>", {
