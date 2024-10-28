@@ -2,7 +2,7 @@ import * as S2 from "./lib/S2";
 import * as localforage from "localforage";
 
 interface CacheEntry {
-    cell: S2.Cell;
+    id: string;
     changed: boolean;
     mu: number[];
 }
@@ -31,21 +31,88 @@ export class DensityMap {
         });
     }
 
-    async getCellsValues(cells: S2.Cell[]): Promise<number[]> {
+    async getCellsValues(cells: S2.Cell[]): Promise<(number | undefined)[]> {
 
-        const resultsIndex: number[] = []
+        // eslint-disable-next-line unicorn/no-new-array
+        const result: (number | undefined)[] = new Array(cells.length);
 
-        // sort cells by parent
+        let cached: CacheEntry | undefined;
+        let lastID = "";
 
-        // get cache entry
+        for (const [i, cell] of cells.entries()) {
+            console.assert(cell.level === this.cacheLevel, "only 'cache Level' is supported (RN)");
+            const baseID = cell.toString(this.cacheLevel);
+            const index = cell.toArrayIndex(this.cacheLevel);
 
-        // add cells
+            if (lastID !== baseID) {
+                cached = this.cache.find(c => c.id === baseID);
+                if (!cached) {
 
-        return [];
+                    const mus = await this.store.getItem<number[]>(baseID);
+                    if (mus) {
+                        cached = {
+                            id: baseID,
+                            changed: false,
+                            mu: mus
+                        }
+
+                        this.cache.push(cached);
+                    }
+                }
+                lastID = baseID;
+            }
+
+            if (cached) {
+                result[i] = cached.mu[index];
+            }
+        }
+
+        return result;
     }
 
-    private getCacheEntry(field: IITC.Field): Promise<number | undefined> {
-        const old: StoredField | null = await this.store.getItem(myguid);
+
+
+    async setCellsValues(cells: S2.Cell[], values: number[]): Promise<void> {
+
+        let cached: CacheEntry | undefined;
+        let lastID = "";
+
+        for (const [i, cell] of cells.entries()) {
+            console.assert(cell.level === this.cacheLevel, "only 'cache Level' is supported (RN)");
+            const baseID = cell.toString(this.cacheLevel);
+            const index = cell.toArrayIndex(this.cacheLevel);
+
+            if (lastID !== baseID) {
+                cached = this.cache.find(c => c.id === baseID);
+                if (!cached) {
+                    const mus = await this.store.getItem<number[]>(baseID);
+                    if (mus) {
+                        cached = {
+                            id: baseID,
+                            changed: false,
+                            mu: mus
+                        }
+
+                        this.cache.push(cached);
+                    }
+                }
+                lastID = baseID;
+            }
+
+            if (cached && cached.mu[index] !== values[i]) {
+                cached.mu[index] = values[i];
+                cached.changed = true;
+            }
+        }
+    }
+
+    flush() {
+        this.cache
+            .filter(c => c.changed)
+            .forEach(async c => {
+                await this.store.setItem(c.id, c.mu);
+                c.changed = false;
+            })
     }
 
 }
