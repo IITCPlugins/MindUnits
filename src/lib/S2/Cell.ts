@@ -67,13 +67,14 @@ export class Cell {
      * @return Cell-ID as string
      * Note: this is not related to Google-S2-CellID
      * we skip most 64bit arithmetic and skip the hilbertcurve 
+     * @param level force level 
      */
     toString(level?: number): string {
         const numbers: number[] = [this.face];
 
         level ??= this.level;
-        let bit = 1 << (level - 1);
-        while (bit) {
+        let bit = 1 << (this.level - 1);
+        for (; level > 0; level--) {
             numbers.push(((this.ij[0] & bit) ? 1 : 0) + ((this.ij[1] & bit) ? 2 : 0));
             bit >>= 1;
         }
@@ -84,12 +85,43 @@ export class Cell {
     toArrayIndex(baseLevel: number): number {
         let index = 0;
         const level = this.level - baseLevel;
+        console.assert(level > 0, "baseLevel must be lower than current level", this.level, baseLevel);
+        if (level <= 0) {
+            // DEBUG-START
+            throw new Error("baseLevel must be lower than current level");
+            // DEBUG-END
+            return 0;
+        }
         let bit = 1 << (level - 1);
         while (bit) {
-            index += ((this.ij[0] & bit) ? 1 : 0) + ((this.ij[1] & bit) ? 2 : 0);
+            index = (index << 2) + ((this.ij[0] & bit) ? 1 : 0) + ((this.ij[1] & bit) ? 2 : 0);
             bit >>= 1;
         }
         return index;
+    }
+
+    addArrayIndex(index: number, level: number) {
+        const extraLevel = level - this.level;
+        console.assert(extraLevel > 0, "index_Level must be higger than current level", this.level, level);
+        if (extraLevel <= 0) {
+            // DEBUG-START
+            throw new Error("index_Level must be higger than current level");
+            // DEBUG-END
+            return;
+        }
+
+        let bit = 2 << (2 * (extraLevel - 1));
+        while (bit) {
+            this.ij[1] = (this.ij[1] << 1) + ((index & bit) ? 1 : 0);
+            bit >>= 1;
+            this.ij[0] = (this.ij[0] << 1) + ((index & bit) ? 1 : 0);
+            bit >>= 1;
+        }
+        this.level = level;
+
+        const uv0 = STToUV(IJToST(this.ij, this.level, [0, 0]));
+        const uv1 = STToUV(IJToST(this.ij, this.level, [1, 1]));
+        this.uvBound = [uv0, uv1];
     }
 
     maxArrayIndex(baseLevel: number, maxLevel: number): number {

@@ -21,7 +21,7 @@ describe("S2", () => {
         const cells = cover.getCovering(region, 11, 11);
 
         const ids = cells.map(c => c.toString()).join(";");
-        expect(ids).toBe('2[161,879]11;2[161,880]11;2[161,881]11');
+        expect(ids).toBe("202212302223;202212320001;202212320003");
     });
 
 
@@ -36,7 +36,7 @@ describe("S2", () => {
         const cells = cover.getCovering(region, 10, 11);
 
         const ids = cells.map(c => c.toString()).join(";");
-        expect(ids).toBe('2[161,879]11;2[161,880]11;2[161,881]11');
+        expect(ids).toBe("202212302223;202212320001;202212320003");
     });
 
 
@@ -87,10 +87,33 @@ describe("S2", () => {
         const asStr = cell.toString();
 
         for (let i = 13; i < 1; i--) {
-            const parent = cell.getParent();
-            expect(parent!.toString()).toEqual(asStr.slice(0, i + 1));
+            const parent = cell.getParent()!;
+            expect(parent.toString()).toEqual(asStr.slice(0, i + 1));
         }
     });
 
+    it("should all parents start with the same string_id", () => {
+        const cell = S2.Cell.FromLatLng(fields[0][0], 14);
+
+        for (let i = 13; i < 1; i--) {
+            const parent = cell.getParent();
+            expect(parent!.toString()).toEqual(cell.toString(i));
+        }
+    });
+
+
+    it("should convert to string with level", () => {
+        const cell = S2.Cell.FromLatLng(fields[0][0], 14);
+
+        const asStr = cell.toString(10);
+        const index = cell.toArrayIndex(10);
+        expect(asStr).toBe("20221221333"); // "1323" => 01111011 => 123
+        expect(asStr.length).toBe(10 + 1);
+        expect(index).toBe(123);
+
+        const cell2 = S2.Cell.fromString(asStr);
+        cell2.addArrayIndex(index, 14);
+        expect(cell2.toString()).toEqual(cell.toString());
+    });
 
 })
