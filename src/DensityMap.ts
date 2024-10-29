@@ -18,18 +18,18 @@ export class DensityMap {
     constructor(cacheLevel: number, cellLevel: number) {
         console.assert(cacheLevel < cellLevel, "cacheLevel must be greater than cellLevel")
 
+        this.cache = [];
         this.cacheLevel = cacheLevel;
         this.cellLevel = cellLevel;
 
         console.assert(Math.pow(4, this.cellLevel - this.cacheLevel) < 100000, "this wont work, too much entries, level difference to high");
-    }
 
-    init() {
         this.store = localforage.createInstance({
             name: "CellDB",
             driver: [localforage.WEBSQL, localforage.INDEXEDDB],
         });
     }
+
 
     async getCellsValues(cells: S2.Cell[]): Promise<(number | undefined)[]> {
 
@@ -40,7 +40,7 @@ export class DensityMap {
         let lastID = "";
 
         for (const [i, cell] of cells.entries()) {
-            console.assert(cell.level === this.cacheLevel, "only 'cache Level' is supported (RN)");
+            console.assert(cell.level === this.cellLevel, "only 'cell Level' is supported (RN)", cell.level, this.cellLevel);
             const baseID = cell.toString(this.cacheLevel);
             const index = cell.toArrayIndex(this.cacheLevel);
 
@@ -78,7 +78,7 @@ export class DensityMap {
         let lastID = "";
 
         for (const [i, cell] of cells.entries()) {
-            console.assert(cell.level === this.cacheLevel, "only 'cache Level' is supported (RN)");
+            console.assert(cell.level === this.cellLevel, "only 'cell Level' is supported (RN)", cell.level, this.cellLevel);
             const baseID = cell.toString(this.cacheLevel);
             const index = cell.toArrayIndex(this.cacheLevel);
 
@@ -86,15 +86,13 @@ export class DensityMap {
                 cached = this.cache.find(c => c.id === baseID);
                 if (!cached) {
                     const mus = await this.store.getItem<number[]>(baseID);
-                    if (mus) {
-                        cached = {
-                            id: baseID,
-                            changed: false,
-                            mu: mus
-                        }
-
-                        this.cache.push(cached);
+                    cached = {
+                        id: baseID,
+                        changed: false,
+                        mu: mus ?? []
                     }
+
+                    this.cache.push(cached);
                 }
                 lastID = baseID;
             }
@@ -106,6 +104,7 @@ export class DensityMap {
         }
     }
 
+
     flush() {
         this.cache
             .filter(c => c.changed)
@@ -113,6 +112,19 @@ export class DensityMap {
                 await this.store.setItem(c.id, c.mu);
                 c.changed = false;
             })
+    }
+
+    async forEach(callback: (cell: S2.Cell, mindunits: number) => void) {
+        await this.store.iterate((values: number[], baseID: string) => {
+            values.forEach((mu, index) => {
+                if (mu !== undefined) {
+                    const cell = S2.Cell.fromString(baseID);
+                    cell.addArrayIndex(index, this.cellLevel)
+                    callback(cell, mu);
+                }
+            })
+
+        })
     }
 
 }

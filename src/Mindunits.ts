@@ -2,7 +2,6 @@ import { DensityMap } from "./DensityMap";
 import { FieldLogger } from "./FieldLogger";
 import * as S2 from "./lib/S2";
 
-const MAX_TRAIN_FACTOR = 0.9; // max influence a new field have on the S2 Value
 
 export interface Result {
     mindunits: number;
@@ -29,6 +28,11 @@ export class Mindunits {
 
     }
 
+    // for debug/info
+    getDensityMap(): DensityMap {
+        return this.densityMap;
+    }
+
 
     /**
      * train fields from Logger
@@ -40,9 +44,11 @@ export class Mindunits {
 
         this.densityMap.flush();
 
-        console.time("logfield_train_approx");
-        this.calculateTopFields();
-        console.timeEnd("logfield_train_approx");
+        // console.time("logfield_train_approx");
+        // this.calculateTopFields();
+        // console.timeEnd("logfield_train_approx");
+
+        this.densityMap.flush();
     }
 
 
@@ -57,34 +63,27 @@ export class Mindunits {
         const cells = cover.getCovering(region, this.S2MULevel, this.S2MULevel);
         const cellValues = await this.densityMap.getCellsValues(cells);
 
-
         const detailCells = cells.map(cell => cover.howManyIntersect(region, cell, this.S2MUDetailLevel));
-        const cellsIDs = cells.map(id => id.toString());
-        const total = detailCells.reduce((sum, x) => sum + x, 0);
+        const detail_cell_count = detailCells.reduce((sum, x) => sum + x, 0);
 
-        const mu_per_detail = mindunits / total;
+        const mu_per_detail = mindunits / detail_cell_count;
         const mu_per_cell = mu_per_detail * this.S2MUDetailFactor;
-        const isAnyMissing = cellsIDs.some(id => !this.muDB.has(id));
+        const isAnyMissing = cellValues.includes(undefined);
 
         if (isAnyMissing) {
-            cellsIDs.forEach(id => {
-                if (this.muDB.has(id)) {
-                    const current = (this.muDB.get(id)! + mu_per_cell) / 2;
-                    this.muDB.set(id, current);
-                } else {
-                    this.muDB.set(id, mu_per_cell);
-                }
-            })
-        } else {
-            const current_mu = cellsIDs.reduce((mu, id, i) => mu + this.muDB.get(id)! * detailCells[i] / this.S2MUDetailFactor, 0);
-            const mu_diff_per_detail = (mindunits - current_mu) / total;
-            cellsIDs.forEach((id, i) => {
-                console.assert(this.muDB.has(id));
 
-                const delta = mu_diff_per_detail * detailCells[i] / total
-                const current = this.muDB.get(id)! + delta;
-                this.muDB.set(id, current);
-            })
+            const newValues = cellValues.map(v => v ? (v + mu_per_cell) / 2 : mu_per_cell);
+            await this.densityMap.setCellsValues(cells, newValues);
+
+        } else {
+            const current_mu = cellValues.reduce<number>((sum, cell_value, i) => sum + cell_value! * detailCells[i] / this.S2MUDetailFactor, 0);
+            const mu_diff_per_detail = (mindunits - current_mu) / detail_cell_count;
+
+            const newValues = cellValues.map((v, i) => {
+                const delta = mu_diff_per_detail * detailCells[i] / detail_cell_count
+                return v! + delta;
+            });
+            await this.densityMap.setCellsValues(cells, newValues);
         }
 
         //  - - - 
@@ -100,62 +99,63 @@ export class Mindunits {
      * train one field
      */
     calculateTopFields() {
-        this.calculateParents(this.muDB);
+        // this.calculateParents(this.muDB);
     }
 
-    private calculateParents(fields: Map<string, number>): void {
-        // lets build approximate values for missing cell
-        if (fields.size === 0) {
-            console.error("no parent fields?");
-            return;
-        }
+    // private calculateParents(fields: Map<string, number>): void {
+    //     // lets build approximate values for missing cell
+    //     if (fields.size === 0) {
+    //         console.error("no parent fields?");
+    //         return;
+    //     }
 
-        const first = fields.keys().next();
-        const firstCellID = first.value as string;
-        const cell = S2.Cell.fromString(firstCellID);
+    //     const first = fields.keys().next();
+    //     const firstCellID = first.value as string;
+    //     const cell = S2.Cell.fromString(firstCellID);
 
-        if (cell.level === 1) return;
-
-
-        const parents = new Map<string, number[]>();
-        fields.forEach((mindunits, id) => {
-            const cell = S2.Cell.fromString(id);
-            const parent = cell.getParent();
-            const parent_id = parent!.toString();
-
-            const inParents = parents.get(parent_id);
-            if (inParents) {
-                inParents.push(mindunits)
-            } else {
-                parents.set(parent_id, [mindunits]);
-            }
-        })
+    //     if (cell.level === 1) return;
 
 
-        const parentValues = new Map<string, number>();
-        parents.forEach((munits, id) => {
-            const approx = munits.reduce((s, x) => s + x, 0) / munits.length * 4;
-            parentValues.set(id, approx);
+    //     const parents = new Map<string, number[]>();
+    //     fields.forEach((mindunits, id) => {
+    //         const cell = S2.Cell.fromString(id);
+    //         const parent = cell.getParent();
+    //         const parent_id = parent!.toString();
 
-            if (cell.level !== this.S2MULevel - 1 || munits.length !== 4) {
-                this.muDBParents.set(id, approx);
-
-                if (cell.level === 1) {
-                    console.log("Cell", id, approx);
-                }
-            }
-        });
-
-        this.calculateParents(parentValues);
-    }
+    //         const inParents = parents.get(parent_id);
+    //         if (inParents) {
+    //             inParents.push(mindunits)
+    //         } else {
+    //             parents.set(parent_id, [mindunits]);
+    //         }
+    //     })
 
 
+    //     const parentValues = new Map<string, number>();
+    //     parents.forEach((munits, id) => {
+    //         const approx = munits.reduce((s, x) => s + x, 0) / munits.length * 4;
+    //         parentValues.set(id, approx);
 
-    calcMU(ll: L.LatLng[]): Result {
+    //         if (cell.level !== this.S2MULevel - 1 || munits.length !== 4) {
+    //             this.muDBParents.set(id, approx);
+
+    //             if (cell.level === 1) {
+    //                 console.log("Cell", id, approx);
+    //             }
+    //         }
+    //     });
+
+    //     this.calculateParents(parentValues);
+    // }
+
+
+
+    async calcMU(ll: L.LatLng[]): Promise<Result> {
         const cover = new S2.RegionCover();
         const region = new S2.Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
 
         const cells = cover.getCovering(region, this.S2MULevel, this.S2MULevel);
+        const cellValues = await this.densityMap.getCellsValues(cells);
 
         const result = <Result>{
             mindunits: 0,
@@ -164,22 +164,21 @@ export class Mindunits {
             approx: 0,
         };
 
-        cells.forEach(cell => {
-            const id = cell.toString();
+        cells.forEach((cell, index) => {
             const details = cover.howManyIntersect(region, cell, this.S2MUDetailLevel);
             result.cells += details;
 
-            const cellMU = this.muDB.get(id);
+            const cellMU = cellValues[index];
             if (cellMU) {
                 result.mindunits += cellMU * details / this.S2MUDetailFactor;
             } else {
-                const parentUnits = this.findParentUnits(cell);
+                /*const parentUnits = this.findParentUnits(cell);
                 if (parentUnits) {
                     result.mindunits += parentUnits * details / this.S2MUDetailFactor;
                     result.approx += details;
-                } else {
-                    result.missing += details;
-                }
+                } else {*/
+                result.missing += details;
+                //}
             }
         });
 
@@ -187,26 +186,13 @@ export class Mindunits {
         return result;
     }
 
-    private findParentUnits(cell: S2.Cell): number | undefined {
-        const parent = cell.getParent();
-        if (!parent) return undefined;
-        let parentUnits = this.muDBParents.get(parent.toString());
+    // private findParentUnits(cell: S2.Cell): number | undefined {
+    //     const parent = cell.getParent();
+    //     if (!parent) return undefined;
+    //     let parentUnits = this.muDBParents.get(parent.toString());
 
-        if (!parentUnits) parentUnits = this.findParentUnits(parent);
+    //     if (!parentUnits) parentUnits = this.findParentUnits(parent);
 
-        return parentUnits && (parentUnits / 4);
-    }
-
-
-    forEach(callback: (cell: S2.Cell, mindunits: number) => void): void {
-        this.muDB.forEach((mindunits, guid) => {
-            const cell = S2.Cell.fromString(guid);
-            callback(cell, mindunits);
-        })
-    }
-
-
-    getNumberOfCells(): number {
-        return this.muDB.size;
-    }
+    //     return parentUnits && (parentUnits / 4);
+    // }
 }    

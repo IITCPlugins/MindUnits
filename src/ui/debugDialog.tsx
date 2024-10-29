@@ -5,16 +5,12 @@ import { renderCells } from "./render_cells";
 import { renderFields } from "./render_fields";
 
 const [count, setCount] = createSignal<number>();
-const [MUerror, setMUError] = createSignal<number>();
 
 
 const DBStatus = () => {
     void main.getStatLogFieldCount().then(c => setCount(c));
-    void main.getMUError().then(c => setMUError(c));
     return <div style="border: solid 1px yellow">
         Known Fields: {count() ? count() : "?"}<br />
-        Trained Cells: {main.getCellCount()}<br />
-        Avg.Error: {MUerror() ? MUerror() : "?"}
     </div> as any;
 }
 
