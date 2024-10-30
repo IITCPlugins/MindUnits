@@ -1,12 +1,13 @@
 import * as S2 from "../../src/lib/S2";
 
+// TODO: SPLIT
 
 describe("S2", () => {
 
     const fields: S2.LatLng[][] = [
         [{ lat: 51.110770, lng: 7.204330 }, { lat: 50.945868, lng: 7.090983 }, { lat: 50.745500, lng: 7.501098 }], // 86732 Mus
         [{ lat: 51.208804, lng: 7.194191 }, { lat: 51.204192, lng: 7.110999 }, { lat: 51.202797, lng: 7.166289 }],//  1642 mus
-        [{ lat: 59.537733, lng: -1.603716 }, { lat: 52.436023, lng: 7.069284 }, { lat: 52.408397, lng: 5.731935 }], // bug
+        [{ lat: 59.537733, lng: -1.603716 }, { lat: 52.436023, lng: 7.069284 }, { lat: 52.408397, lng: 5.731935 }], // was bugged
     ];
 
     it("should find covering cell", () => {

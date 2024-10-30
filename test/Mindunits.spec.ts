@@ -1,112 +1,34 @@
 import { Mindunits } from '../src/Mindunits';
 import * as L from 'leaflet';
-// import * as S2 from '../src/lib/S2';
-
-import * as fieldData1 from './fixtures/fields_1.json';
-// import * as fieldData2 from './fixtures/fields_2.json';
-// type JSONData = { points: S2.LatLng[], mu: number }[];
 
 
-/*
-const enum ResultType { ALL_CELLS = 0, MISSING, APPROX }
-interface ErrorResult {
-    result: number[];
-    count: number[];
-};
+jest.mock('localforage', () => ({
+    createInstance: jest.fn().mockImplementation(() => ({
+        getItem: () => undefined,
+        setItem: () => undefined,
+    }))
+}));
 
-const calculateError = (db: Mindunits, fields: JSONData): ErrorResult => {
-
-    const r: ErrorResult = {
-        result: [0, 0, 0],
-        count: [0, 0, 0],
-    }
-
-    fields.forEach((d, index) => {
-        const result = db.calcMU(d.points.map(l => L.latLng(l)));
-
-        const type = result.missing > 0 ? ResultType.MISSING :
-            result.approx > 0 ? ResultType.APPROX :
-                ResultType.ALL_CELLS
-
-        const error = result.mindunits - d.mu;
-        // const error = 1 - (result.mindunits / d.mu);
-        r.count[type]++;
-        r.result[type] += error * error;
-    })
-
-    for (let t = 0; t < 3; t++) {
-        const count = Math.max(r.count[t], 2);
-        r.result[t] = Math.sqrt(r.result[t] / (count * (count - 1)));
-    }
-
-    return r;
-}
-*/
 
 describe("Mindunits", () => {
 
+    const Fields = [
+        { "points": [{ "lat": 51.615024, "lng": 7.627416 }, { "lat": 51.567695, "lng": 7.521168 }, { "lat": 51.556467, "lng": 7.671699 }], "mu": 25697 }
+    ];
+
+
     it("should train", async () => {
-        const db = new Mindunits()
+        const db = new Mindunits();
+        const coords = Fields[0].points.map(l => L.latLng(l));
+        const field_mus = Fields[0].mu;
 
-        for (let i = 0; i < fieldData1.length; i++) {
-            const field = fieldData1[i];
-            await db.trainField(field.points.map(l => L.latLng(l)), field.mu);
-        };
+        await db.trainField(coords, field_mus);
+        expect(db.getDensityMap().getCachedCells()).toBeGreaterThan(0);
 
-        // expect(db.getNumberOfCells()).toBeGreaterThan(0);
 
-        // const error = calculateError(db, fieldData2);
-        // console.log(`Train1 Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
-        // expect(error.result[ResultType.ALL_CELLS]).toBeGreaterThan(0);
+        const result = await db.calcMU(coords);
+
+        expect(result.mindunits).toBe(field_mus);
     })
 
-    /*
-    
-        it.skip("should train2", () => {
-            const db = new Mindunits()
-    
-            for (let i = 0; i < 1; i++) {
-                fieldData1.forEach(d => {
-                    db.trainField2(d.points.map(l => L.latLng(l)), d.mu);
-                })
-                // const error = calculateError(db, fieldData2);
-                // console.log(`b${i + 1}. Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
-            }
-            // db.calculateTopFields();
-    
-            expect(db.getNumberOfCells()).toBeGreaterThan(0);
-    
-            const error = calculateError(db, fieldData2);
-            console.log(`Train2 Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
-            expect(error.result[ResultType.ALL_CELLS]).toBeGreaterThan(0);
-        })
-    
-        it("should learn a field with train2", () => {
-            const db = new Mindunits()
-            db.trainField2(fieldData1[0].points.map(l => L.latLng(l)), fieldData1[0].mu);
-            expect(db.getNumberOfCells()).toBeGreaterThan(0);
-        })
-    
-        it.skip("should train highlevel", () => {
-            const db = new Mindunits(14, 17);
-    
-    
-            for (let i = 0; i < 10; i++) {
-    
-                fieldData1.forEach(d => {
-                    db.trainField(d.points.map(l => L.latLng(l)), d.mu);
-                })
-                db.calculateTopFields();
-    
-    
-                expect(db.getNumberOfCells()).toBeGreaterThan(0);
-    
-                const error = calculateError(db, fieldData2);
-                if (i == 9)
-                    console.log(`${i + 1}. Error_All:    ${error.result[ResultType.ALL_CELLS]}  (n=${error.count[ResultType.ALL_CELLS]})`);
-                // console.error(`Error_Approx: ${error.result[ResultType.APPROX]}  (n=${error.count[ResultType.APPROX]})`);
-                // console.error(`Error_Miss:   ${error.result[ResultType.MISSING]}  (n=${error.count[ResultType.MISSING]})`);
-            }
-        })
-        */
 });
