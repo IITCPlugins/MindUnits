@@ -30,6 +30,10 @@ export class DensityMap {
         });
     }
 
+    getCachedCells(): number {
+        const sum = this.cache.reduce((sum, ar) => sum + ar.mu.filter(v => v !== undefined).length, 0)
+        return sum;
+    }
 
     async getCellsValues(cells: S2.Cell[]): Promise<(number | undefined)[]> {
 
@@ -53,7 +57,7 @@ export class DensityMap {
                         cached = {
                             id: baseID,
                             changed: false,
-                            mu: mus
+                            mu: mus ?? []
                         }
 
                         this.cache.push(cached);
@@ -62,9 +66,7 @@ export class DensityMap {
                 lastID = baseID;
             }
 
-            if (cached) {
-                result[i] = cached.mu[index];
-            }
+            result[i] = cached?.mu[index];
         }
 
         return result;
@@ -79,6 +81,7 @@ export class DensityMap {
 
         for (const [i, cell] of cells.entries()) {
             console.assert(cell.level === this.cellLevel, "only 'cell Level' is supported (RN)", cell.level, this.cellLevel);
+            console.assert(values[i] !== undefined, "no value[i] given");
             const baseID = cell.toString(this.cacheLevel);
             const index = cell.toArrayIndex(this.cacheLevel);
 
