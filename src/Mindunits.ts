@@ -2,6 +2,7 @@ import { DensityMap } from "./DensityMap";
 import { FieldLogger } from "./FieldLogger";
 import * as S2 from "./lib/S2";
 
+const MIN_MU_PER_CELL = 1; // to prevent negaitv Mindunits
 
 export interface Result {
     mindunits: number;
@@ -43,12 +44,6 @@ export class Mindunits {
         console.timeEnd("logfield_train");
 
         this.densityMap.flush();
-
-        // console.time("logfield_train_approx");
-        // this.calculateTopFields();
-        // console.timeEnd("logfield_train_approx");
-
-        this.densityMap.flush();
     }
 
 
@@ -81,12 +76,13 @@ export class Mindunits {
 
             const newValues = cellValues.map((v, i) => {
                 const delta = mu_diff_per_detail * detailCells[i] / detail_cell_count
-                return v! + delta;
+                return Math.max(v! + delta, MIN_MU_PER_CELL);
             });
             await this.densityMap.setCellsValues(cells, newValues);
         }
 
-        //  - - - 
+        //  Example:
+        // (Iteration. Field -> cells)
         //  1. 1000Mu Left        -> 500 500 -     
         //  1. 500Mu Right        -> 500 375 250
         //  2. 1000Mu Left +125   -> 562 437 250    
@@ -94,59 +90,6 @@ export class Mindunits {
         //  3. 1000Mu Left +94    -> 609 435 157
         //  3. 500Mu Right -92    -> 609 389 203
     }
-
-    /**
-     * train one field
-     */
-    calculateTopFields() {
-        // this.calculateParents(this.muDB);
-    }
-
-    // private calculateParents(fields: Map<string, number>): void {
-    //     // lets build approximate values for missing cell
-    //     if (fields.size === 0) {
-    //         console.error("no parent fields?");
-    //         return;
-    //     }
-
-    //     const first = fields.keys().next();
-    //     const firstCellID = first.value as string;
-    //     const cell = S2.Cell.fromString(firstCellID);
-
-    //     if (cell.level === 1) return;
-
-
-    //     const parents = new Map<string, number[]>();
-    //     fields.forEach((mindunits, id) => {
-    //         const cell = S2.Cell.fromString(id);
-    //         const parent = cell.getParent();
-    //         const parent_id = parent!.toString();
-
-    //         const inParents = parents.get(parent_id);
-    //         if (inParents) {
-    //             inParents.push(mindunits)
-    //         } else {
-    //             parents.set(parent_id, [mindunits]);
-    //         }
-    //     })
-
-
-    //     const parentValues = new Map<string, number>();
-    //     parents.forEach((munits, id) => {
-    //         const approx = munits.reduce((s, x) => s + x, 0) / munits.length * 4;
-    //         parentValues.set(id, approx);
-
-    //         if (cell.level !== this.S2MULevel - 1 || munits.length !== 4) {
-    //             this.muDBParents.set(id, approx);
-
-    //             if (cell.level === 1) {
-    //                 console.log("Cell", id, approx);
-    //             }
-    //         }
-    //     });
-
-    //     this.calculateParents(parentValues);
-    // }
 
 
 
@@ -185,14 +128,4 @@ export class Mindunits {
         result.mindunits = Math.ceil(result.mindunits);
         return result;
     }
-
-    // private findParentUnits(cell: S2.Cell): number | undefined {
-    //     const parent = cell.getParent();
-    //     if (!parent) return undefined;
-    //     let parentUnits = this.muDBParents.get(parent.toString());
-
-    //     if (!parentUnits) parentUnits = this.findParentUnits(parent);
-
-    //     return parentUnits && (parentUnits / 4);
-    // }
 }    
