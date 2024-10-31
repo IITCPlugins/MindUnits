@@ -21,7 +21,7 @@ export class Mindunits {
     private S2MUDetailFactor: number;
 
     constructor(cell_level: number = 11, detail_level: number = 17) {
-        this.densityMap = new DensityMap(cell_level - 4, cell_level);
+        this.densityMap = new DensityMap(cell_level - 5, cell_level);
 
         this.S2MULevel = cell_level;
         this.S2MUDetailLevel = detail_level;
