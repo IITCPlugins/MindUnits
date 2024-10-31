@@ -17,17 +17,24 @@ describe("Mindunits", () => {
     ];
 
 
-    it("should train", async () => {
+    it("should train a field", async () => {
         const db = new Mindunits();
         const coords = Fields[0].points.map(l => L.latLng(l));
         const field_mus = Fields[0].mu;
 
         await db.trainField(coords, field_mus);
         expect(db.getDensityMap().getCachedCells()).toBeGreaterThan(0);
+    })
 
+
+    it("should return same MU for trained field", async () => {
+        const coords = Fields[0].points.map(l => L.latLng(l));
+        const field_mus = Fields[0].mu;
+
+        const db = new Mindunits();
+        await db.trainField(coords, field_mus);
 
         const result = await db.calcMU(coords);
-
         expect(result.mindunits).toBe(field_mus);
     })
 
