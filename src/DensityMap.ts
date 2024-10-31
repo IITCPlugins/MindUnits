@@ -1,26 +1,37 @@
 import * as S2 from "./lib/S2";
 import * as localforage from "localforage";
 
+
 interface CacheEntry {
     id: string;
     changed: boolean;
     mu: number[];
 }
 
+
+
 export class DensityMap {
 
     private cacheLevel: number;
     private cellLevel: number;
+    private maxCacheEntries: number;
     private cache: CacheEntry[];
     private store: LocalForage;
 
-
-    constructor(cacheLevel: number, cellLevel: number) {
+    /**
+     * 
+     * @param cacheLevel grouped by this cell level ()
+     * @param cellLevel cell level to be requestes
+     * @param maxCacheEntries max number of groups keepd in memory
+     * Each group can take a max ofre Math.pow(4,cellLevel-cacheLevel) * sizeof(number) memory
+     */
+    constructor(cacheLevel: number, cellLevel: number, maxCacheEntries: number = 10) {
         console.assert(cacheLevel < cellLevel, "cacheLevel must be greater than cellLevel")
 
         this.cache = [];
         this.cacheLevel = cacheLevel;
         this.cellLevel = cellLevel;
+        this.maxCacheEntries = maxCacheEntries;
 
         console.assert(Math.pow(4, this.cellLevel - this.cacheLevel) < 100000, "this wont work, too much entries, level difference to high");
 
@@ -30,12 +41,20 @@ export class DensityMap {
         });
     }
 
+
+    /**
+     * for debug / statistic / test
+     */
     getCachedCells(): number {
         const sum = this.cache.reduce((sum, ar) => sum + ar.mu.filter(v => v !== undefined).length, 0)
         return sum;
     }
 
-    async getCellsValues(cells: S2.Cell[]): Promise<(number | undefined)[]> {
+    /**
+     * Get cell values of all given cells
+     * @param cacheCleanup set to false for large operations and when memory is not an issue
+     */
+    async getCellsValues(cells: S2.Cell[], cacheCleanup: boolean = true): Promise<(number | undefined)[]> {
 
         // eslint-disable-next-line unicorn/no-new-array
         const result: (number | undefined)[] = new Array(cells.length);
@@ -45,7 +64,7 @@ export class DensityMap {
 
         for (const [i, cell] of cells.entries()) {
             console.assert(cell.level === this.cellLevel, "only 'cell Level' is supported (RN)", cell.level, this.cellLevel);
-            const baseID = cell.toString(this.cacheLevel);
+            const baseID = `${cell.toString(this.cacheLevel)}_${this.cellLevel}`;
             const index = cell.toArrayIndex(this.cacheLevel);
 
             if (lastID !== baseID) {
@@ -69,11 +88,16 @@ export class DensityMap {
             result[i] = cached?.mu[index];
         }
 
+        if (cacheCleanup) this.updateCache();
+
         return result;
     }
 
 
-
+    /**
+     * Set cell values of all given cells
+     * NOTE: make sure to trigger 'save' or 'cacheClear' to store new values
+     */
     async setCellsValues(cells: S2.Cell[], values: number[]): Promise<void> {
 
         let cached: CacheEntry | undefined;
@@ -82,7 +106,7 @@ export class DensityMap {
         for (const [i, cell] of cells.entries()) {
             console.assert(cell.level === this.cellLevel, "only 'cell Level' is supported (RN)", cell.level, this.cellLevel);
             console.assert(values[i] !== undefined, "no value[i] given");
-            const baseID = cell.toString(this.cacheLevel);
+            const baseID = `${cell.toString(this.cacheLevel)}_${this.cellLevel}`;
             const index = cell.toArrayIndex(this.cacheLevel);
 
             if (lastID !== baseID) {
@@ -108,7 +132,7 @@ export class DensityMap {
     }
 
 
-    flush() {
+    save() {
         this.cache
             .filter(c => c.changed)
             .forEach(async c => {
@@ -116,6 +140,22 @@ export class DensityMap {
                 c.changed = false;
             })
     }
+
+
+    updateCache() {
+        while (this.cache.length > this.maxCacheEntries) {
+            const c = this.cache.shift();
+            if (c?.changed) {
+                void this.store.setItem(c.id, c.mu);
+            }
+        }
+    }
+
+    clearCache() {
+        this.save();
+        this.cache.length = 0;
+    }
+
 
     async forEach(callback: (cell: S2.Cell, mindunits: number) => void) {
         await this.store.iterate((values: number[], baseID: string) => {

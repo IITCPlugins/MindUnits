@@ -43,7 +43,8 @@ export class Mindunits {
         await fieldLog.forEach(async (latlngs, mindunits) => await this.trainField(latlngs, mindunits));
         console.timeEnd("logfield_train");
 
-        this.densityMap.flush();
+        this.densityMap.save();
+        this.densityMap.updateCache();
     }
 
 
@@ -56,7 +57,7 @@ export class Mindunits {
         const region = new S2.Triangle(S2.LatLngToXYZ(ll[0]), S2.LatLngToXYZ(ll[1]), S2.LatLngToXYZ(ll[2]));
 
         const cells = cover.getCovering(region, this.S2MULevel, this.S2MULevel);
-        const cellValues = await this.densityMap.getCellsValues(cells);
+        const cellValues = await this.densityMap.getCellsValues(cells, false);
 
         const detailCells = cells.map(cell => cover.howManyIntersect(region, cell, this.S2MUDetailLevel));
         const detail_cell_count = detailCells.reduce((sum, x) => sum + x, 0);
