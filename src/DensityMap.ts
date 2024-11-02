@@ -59,31 +59,12 @@ export class DensityMap {
         // eslint-disable-next-line unicorn/no-new-array
         const result: (number | undefined)[] = new Array(cells.length);
 
-        let cached: CacheEntry | undefined;
-        let lastID = "";
-
         for (const [i, cell] of cells.entries()) {
             console.assert(cell.level === this.cellLevel, "only 'cell Level' is supported (RN)", cell.level, this.cellLevel);
             const baseID = `${cell.toString(this.cacheLevel)}_${this.cellLevel}`;
             const index = cell.toArrayIndex(this.cacheLevel);
 
-            if (lastID !== baseID) {
-                cached = this.cache.find(c => c.id === baseID);
-                if (!cached) {
-
-                    const mus = await this.store.getItem<number[]>(baseID);
-                    if (mus) {
-                        cached = {
-                            id: baseID,
-                            changed: false,
-                            mu: mus ?? []
-                        }
-
-                        this.cache.push(cached);
-                    }
-                }
-                lastID = baseID;
-            }
+            const cached = await this.getEntry(baseID);
 
             result[i] = cached?.mu[index];
         }
@@ -100,35 +81,60 @@ export class DensityMap {
      */
     async setCellsValues(cells: S2.Cell[], values: number[]): Promise<void> {
 
-        let cached: CacheEntry | undefined;
-        let lastID = "";
-
         for (const [i, cell] of cells.entries()) {
             console.assert(cell.level === this.cellLevel, "only 'cell Level' is supported (RN)", cell.level, this.cellLevel);
             console.assert(values[i] !== undefined, "no value[i] given");
             const baseID = `${cell.toString(this.cacheLevel)}_${this.cellLevel}`;
             const index = cell.toArrayIndex(this.cacheLevel);
 
-            if (lastID !== baseID) {
-                cached = this.cache.find(c => c.id === baseID);
-                if (!cached) {
-                    const mus = await this.store.getItem<number[]>(baseID);
-                    cached = {
-                        id: baseID,
-                        changed: false,
-                        mu: mus ?? []
-                    }
+            const cached = await this.getEntryOrCreate(baseID);
 
-                    this.cache.push(cached);
-                }
-                lastID = baseID;
-            }
-
-            if (cached && cached.mu[index] !== values[i]) {
+            if (cached.mu[index] !== values[i]) {
                 cached.mu[index] = values[i];
                 cached.changed = true;
             }
         }
+    }
+
+
+    private lastCachedID: string;
+    private lastCachedEnty: CacheEntry | undefined;
+    private async getEntry(id: string): Promise<CacheEntry | undefined> {
+        if (this.lastCachedID === id) return this.lastCachedEnty!;
+
+        this.lastCachedEnty = this.cache.find(c => c.id === id);
+        if (!this.lastCachedEnty) {
+            const mus = await this.store.getItem<number[]>(id);
+            if (mus) {
+                this.lastCachedEnty = {
+                    id: id,
+                    changed: false,
+                    mu: mus
+                }
+            }
+        }
+
+        this.lastCachedID = id;
+        return this.lastCachedEnty;
+    }
+
+
+    private async getEntryOrCreate(id: string): Promise<CacheEntry> {
+        if (this.lastCachedEnty?.id === id) return this.lastCachedEnty;
+
+        this.lastCachedEnty = this.cache.find(c => c.id === id);
+        if (!this.lastCachedEnty) {
+            const mus = await this.store.getItem<number[]>(id);
+            this.lastCachedEnty = {
+                id: id,
+                changed: false,
+                mu: mus ?? []
+            }
+            this.cache.push(this.lastCachedEnty);
+        }
+
+        this.lastCachedID = id;
+        return this.lastCachedEnty;
     }
 
 
