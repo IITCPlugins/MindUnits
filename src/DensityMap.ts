@@ -176,4 +176,33 @@ export class DensityMap {
         })
     }
 
+
+    protected async getByParent(cell: S2.Cell, levelDif: number = 1): Promise<number | undefined> {
+        const baseID = `${cell.toString(this.cacheLevel)}_${this.cellLevel}`;
+        const mask = (1 << (2 * levelDif)) - 1;
+        const index = cell.toArrayIndex(this.cacheLevel) & ~mask;
+
+        const cached = await this.getEntry(baseID);
+        if (!cached) return;
+
+        const values = cached.mu.slice(index, index + Math.pow(4, levelDif))
+            .filter(f => f !== undefined);
+        const sum = values.reduce((sum, v) => sum + v, 0);
+
+        if (values.length === 0) return;
+
+        return sum / values.length;
+    }
+
+
+    async getCellValuebyNeighbors(cell: S2.Cell): Promise<number | undefined> {
+        let levelDif = 1;
+        while (this.cacheLevel <= this.cellLevel - levelDif) {
+            const value = await this.getByParent(cell, levelDif);
+            if (value) return value;
+            levelDif++;
+        }
+
+        return undefined;
+    }
 }
