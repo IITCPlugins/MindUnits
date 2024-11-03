@@ -1,7 +1,7 @@
 import * as Plugin from "iitcpluginkit";
 import * as S2 from "./lib/S2";
 import { FieldLogger } from "./FieldLogger";
-import { MindunitsDB, Result as MUResult } from "./Mindunits";
+import { Mindunits, Result as MUResult } from "./Mindunits";
 import { DebugDialog } from "./ui/debugDialog";
 import myicon from "./ui/images/icon.svg";
 import { CSVExport } from "./lib/CSVExport";
@@ -15,7 +15,7 @@ const S2MULevel = 11;
 class LogFields implements Plugin.Class {
 
     public fieldLog: FieldLogger;
-    public muDB: MindunitsDB;
+    public muDB: Mindunits;
 
     private layer: L.LayerGroup<any>;
     private mustrings = new Map<string, L.Marker>();
@@ -45,7 +45,7 @@ class LogFields implements Plugin.Class {
         this.layer = new L.LayerGroup();
         window.addLayerGroup("Field MUs", this.layer, false);
 
-        this.muDB = new MindunitsDB(S2MULevel, S2MUDetailLevel);
+        this.muDB = new Mindunits(S2MULevel, S2MUDetailLevel);
         this.hasTrained = false;
 
         $("#toolbox").append($("<a>", {
@@ -68,10 +68,6 @@ class LogFields implements Plugin.Class {
 
     async getStatLogFieldCount(): Promise<number> {
         return await this.fieldLog.getFieldCount();
-    }
-
-    getCellCount(): number {
-        return this.muDB.getNumberOfCells();
     }
 
     onFieldAdd = async (fieldEvent: EventFieldAdded): Promise<void> => {
@@ -167,6 +163,7 @@ class LogFields implements Plugin.Class {
     }
 
 
+    // TODO: change to UPDATE Tooltip
     async createTooltip(pos: L.LatLng, fields: IITC.Field[], drawTools: L.Polygon[]): Promise<void> {
 
         // real Fields
@@ -212,10 +209,12 @@ class LogFields implements Plugin.Class {
     private async getFieldMUText(field: IITC.Field): Promise<{ text: string, mindunits: number }> {
 
 
-        const calcMU = this.muDB.calcMU(field.getLatLngs());
+        const calcMU = await this.muDB.calcMU(field.getLatLngs());
         const calcMUStr = this.resultToString(calcMU);
 
         const mindunits = await this.fieldLog.getFieldMUS(field);
+
+        // eslint-disable-next-line unicorn/prefer-ternary
         if (mindunits) {
             return {
                 // known field
@@ -232,7 +231,7 @@ class LogFields implements Plugin.Class {
 
     }
 
-    private getDTPolygonText(polygon: L.Polygon): { text: string, mindunits: number } {
+    private async getDTPolygonText(polygon: L.Polygon): Promise<{ text: string, mindunits: number }> {
 
         // TODO: add S2 Polygon Region
 
@@ -247,7 +246,7 @@ class LogFields implements Plugin.Class {
         for (let i = 2; i < ll.length; i++) {
             const latLngs = [ll[0], ll[i - 1], ll[i]];
 
-            const calcMU = this.muDB.calcMU(latLngs);
+            const calcMU = await this.muDB.calcMU(latLngs);
             total.mindunits += calcMU.mindunits;
             total.cells += calcMU.cells;
             total.missing += calcMU.missing;
@@ -405,21 +404,6 @@ class LogFields implements Plugin.Class {
 
         const file = new CSVExport<any>(data, { name: "fields" });
         file.save();
-    }
-
-    async getMUError(): Promise<number> {
-        let error = 0;
-        let count = 0;
-        await this.fieldLog.forEach((ll, mindunits) => {
-            const calc = this.muDB.calcMU(ll);
-            const diff = Math.abs(calc.mindunits - mindunits);
-            error += diff;
-            count++;
-        })
-
-        if (count === 0) return 100;
-
-        return Math.ceil(error / count);
     }
 }
 
