@@ -61,11 +61,10 @@ export class DensityMap {
 
         for (const [i, cell] of cells.entries()) {
             console.assert(cell.level === this.cellLevel, "only 'cell Level' is supported (RN)", cell.level, this.cellLevel);
-            const baseID = `${cell.toString(this.cacheLevel)}_${this.cellLevel}`;
+
+            const cached = await this.getEntry(cell);
+
             const index = cell.toArrayIndex(this.cacheLevel);
-
-            const cached = await this.getEntry(baseID);
-
             result[i] = cached?.mu[index];
         }
 
@@ -73,7 +72,6 @@ export class DensityMap {
 
         return result;
     }
-
 
     /**
      * Set cell values of all given cells
@@ -84,10 +82,9 @@ export class DensityMap {
         for (const [i, cell] of cells.entries()) {
             console.assert(cell.level === this.cellLevel, "only 'cell Level' is supported (RN)", cell.level, this.cellLevel);
             console.assert(values[i] !== undefined, "no value[i] given");
-            const baseID = `${cell.toString(this.cacheLevel)}_${this.cellLevel}`;
-            const index = cell.toArrayIndex(this.cacheLevel);
 
-            const cached = await this.getEntryOrCreate(baseID);
+            const cached = await this.getEntryOrCreate(cell);
+            const index = cell.toArrayIndex(this.cacheLevel);
 
             if (cached.mu[index] !== values[i]) {
                 cached.mu[index] = values[i];
@@ -99,7 +96,8 @@ export class DensityMap {
 
     private lastCachedID: string;
     private lastCachedEnty: CacheEntry | undefined;
-    private async getEntry(id: string): Promise<CacheEntry | undefined> {
+    private async getEntry(cell: S2.Cell): Promise<CacheEntry | undefined> {
+        const id = `${cell.toString(this.cacheLevel)}_${this.cellLevel}`;
         if (this.lastCachedID === id) return this.lastCachedEnty!;
 
         this.lastCachedEnty = this.cache.find(c => c.id === id);
@@ -119,7 +117,8 @@ export class DensityMap {
     }
 
 
-    private async getEntryOrCreate(id: string): Promise<CacheEntry> {
+    private async getEntryOrCreate(cell: S2.Cell): Promise<CacheEntry> {
+        const id = `${cell.toString(this.cacheLevel)}_${this.cellLevel}`;
         if (this.lastCachedEnty?.id === id) return this.lastCachedEnty;
 
         this.lastCachedEnty = this.cache.find(c => c.id === id);
@@ -178,11 +177,10 @@ export class DensityMap {
 
 
     protected async getByParent(cell: S2.Cell, levelDif: number = 1): Promise<number | undefined> {
-        const baseID = `${cell.toString(this.cacheLevel)}_${this.cellLevel}`;
         const mask = (1 << (2 * levelDif)) - 1;
         const index = cell.toArrayIndex(this.cacheLevel) & ~mask;
 
-        const cached = await this.getEntry(baseID);
+        const cached = await this.getEntry(cell);
         if (!cached) return;
 
         const values = cached.mu.slice(index, index + Math.pow(4, levelDif))
