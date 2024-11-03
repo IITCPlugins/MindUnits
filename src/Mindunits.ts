@@ -108,7 +108,7 @@ export class Mindunits {
             approx: 0,
         };
 
-        cells.forEach((cell, index) => {
+        for (const [index, cell] of cells.entries()) {
             const details = cover.howManyIntersect(region, cell, this.S2MUDetailLevel);
             result.cells += details;
 
@@ -116,15 +116,15 @@ export class Mindunits {
             if (cellMU) {
                 result.mindunits += cellMU * details / this.S2MUDetailFactor;
             } else {
-                /*const parentUnits = this.findParentUnits(cell);
+                const parentUnits = await this.densityMap.getCellValuebyNeighbors(cell);
                 if (parentUnits) {
                     result.mindunits += parentUnits * details / this.S2MUDetailFactor;
                     result.approx += details;
-                } else {*/
-                result.missing += details;
-                //}
+                } else {
+                    result.missing += details;
+                }
             }
-        });
+        };
 
         result.mindunits = Math.ceil(result.mindunits);
         return result;
