@@ -129,4 +129,12 @@ export class Mindunits {
         result.mindunits = Math.ceil(result.mindunits);
         return result;
     }
+
+
+    /**
+     * release memory
+     */
+    cleanUp() {
+        this.densityMap.clearCache();
+    }
 }    

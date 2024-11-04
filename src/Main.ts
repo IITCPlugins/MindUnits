@@ -347,6 +347,8 @@ class LogFields implements Plugin.Class {
         window.clearTimeout(this.mouseDelayTimer);
         window.map.off("mousemove", this.onMouseMove)
         $("#logfieldbutton").removeClass("active");
+
+        this.muDB.cleanUp();
     }
 
     enableTracking() {
