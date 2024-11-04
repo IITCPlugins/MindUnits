@@ -25,7 +25,6 @@ class LogFields implements Plugin.Class {
     private mouseDelayTimer: number | undefined;
     private tooltip: JQuery | undefined;
 
-    private hasTrained: boolean;
     private isTraining: boolean;
 
 
@@ -46,11 +45,10 @@ class LogFields implements Plugin.Class {
         window.addLayerGroup("Field MUs", this.layer, false);
 
         this.muDB = new Mindunits(S2MULevel, S2MUDetailLevel);
-        this.hasTrained = false;
 
         $("#toolbox").append($("<a>", {
             text: "Mindunits", click: () => {
-                if (!this.hasTrained) void this.train();
+                void this.train();
                 new DebugDialog().show()
             }
         }));
@@ -260,11 +258,6 @@ class LogFields implements Plugin.Class {
     }
 
     private resultToString(result: MUResult): string {
-
-
-        if (this.isTraining) return "(train, plz wait)";
-        if (!this.hasTrained) return "(err: not trained)";
-
         const mu = window.digits(result.mindunits);
 
         const error = (result.missing + result.approx) / result.cells;
@@ -324,14 +317,11 @@ class LogFields implements Plugin.Class {
     }
 
 
-    async train(force = false): Promise<void> {
-        if (this.isTraining) return; // FIXME: return running Promise
-        if (!this.hasTrained || force) {
-            this.isTraining = true;
-            await this.muDB.train(this.fieldLog);
-            this.hasTrained = true;
-            this.isTraining = false;
-        }
+    async train(): Promise<void> {
+        if (this.isTraining) return;
+        this.isTraining = true;
+        await this.muDB.train(this.fieldLog);
+        this.isTraining = false;
     }
 
     toggleTracking(event: JQuery.ClickEvent): void {
