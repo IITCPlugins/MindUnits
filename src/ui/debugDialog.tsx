@@ -32,9 +32,8 @@ const DebugDialogContent = () => {
         </Show ><br />
         <button onClick={() => main.train()}>Train</button><br />
         <hr></hr>
-        <button onClick={() => main.exportFields_CSV()}>Export FieldList - CSV</button><br />
-        <button onClick={() => main.importFields()}>Import FieldList - JSON</button><br />
-        <button onClick={() => main.exportFields()}>Export FieldList - JSON</button><br />
+        <button onClick={() => main.importFields()}>Import FieldList</button><br />
+        <button onClick={() => main.exportFields()}>Export FieldList</button><br />
     </>)
 }
 

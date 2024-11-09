@@ -4,7 +4,6 @@ import { FieldLogger } from "./FieldLogger";
 import { Mindunits, Result as MUResult } from "./Mindunits";
 import { DebugDialog } from "./ui/debugDialog";
 import myicon from "./ui/images/icon.svg";
-import { CSVExport } from "./lib/CSVExport";
 import { loadFile } from "./lib/FileLoader";
 
 
@@ -386,26 +385,6 @@ class LogFields implements Plugin.Class {
             this.clearS2Cells();
         }
     }
-
-    async exportFields_CSV() {
-        const data: any[] = [];
-
-        await this.fieldLog.forEach((ll, mindunits) => {
-            data.push({
-                lat1: ll[0].lat,
-                lng1: ll[0].lng,
-                lat2: ll[1].lat,
-                lng2: ll[1].lng,
-                lat3: ll[2].lat,
-                lng3: ll[2].lng,
-                mindunits
-            })
-        })
-
-        const file = new CSVExport<any>(data, { name: "fields" });
-        file.save();
-    }
-
 
     async exportFields() {
         const data: any[] = [];
