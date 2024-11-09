@@ -38,14 +38,14 @@ export class FieldLogger {
     }
 
 
-    forEach(callback: (ll: L.LatLng[], mindunits: number) => void): Promise<void> {
+    forEach(callback: (ll: L.LatLng[], mindunits: number, time: number) => void): Promise<void> {
         return this.store.iterate((data: StoredField, guid) => {
 
             const positions = this.guid2pos(guid);
             const latlngs = positions.map(p => L.latLng(p[0] / 1e6, p[1] / 1e6));
             if (latlngs.length !== 3) return;
 
-            callback(latlngs, data.mus);
+            callback(latlngs, data.mus, data.time);
         });
     }
 
@@ -242,6 +242,8 @@ export class FieldLogger {
             return [];
         }
     }
+
+
     private compFieldLink(fp: { latE6: number, lngE6: number }[], p1: Position, p2: Position): number {
         if (this.equal(fp[0], p1)) {
             if (this.equal(fp[1], p2)) return 2;
@@ -260,6 +262,7 @@ export class FieldLogger {
         }
         return -1;
     }
+
 
     private findSecondPortal(relatedChats: Intel.ChatLine[], pos1: Position, agent: string): Position | undefined {
         let result: Position | undefined;
@@ -336,7 +339,7 @@ export class FieldLogger {
     }
 
 
-    private async storeField(time: number, position: Position[], mindunits: number, field: IITC.Field | undefined): Promise<void> {
+    async storeField(time: number, position: Position[], mindunits: number, field?: IITC.Field): Promise<void> {
         console.info(`-FIELD- ${mindunits}`);
         const myguid = this.pos2guid(position);
 
