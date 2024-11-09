@@ -117,4 +117,29 @@ describe("S2", () => {
         expect(cell2.toString()).toEqual(cell.toString());
     });
 
+
+    it("should convert to string and keep lat,lng", () => {
+        const cell = S2.Cell.FromLatLng(fields[0][0], 14);
+        const xyz = S2.LatLngToXYZ(fields[0][0]);
+
+        expect(cell.contains(xyz)).toBeTruthy();
+
+        const asStr = cell.toString();
+        const cell2 = S2.Cell.fromString(asStr);
+        expect(cell2.contains(xyz)).toBeTruthy();
+    });
+
+
+    it("should convert to string with level  and keep lat,lng ", () => {
+        const cell = S2.Cell.FromLatLng(fields[0][0], 14);
+        const xyz = S2.LatLngToXYZ(fields[0][0]);
+
+        const asStr = cell.toString(10);
+        const index = cell.toArrayIndex(10);
+
+        const cell2 = S2.Cell.fromString(asStr);
+        cell2.addArrayIndex(index, 14);
+        expect(cell2.contains(xyz)).toBeTruthy();
+    });
+
 })
