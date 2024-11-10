@@ -163,15 +163,21 @@ export class DensityMap {
 
 
     async forEach(callback: (cell: S2.Cell, mindunits: number) => void) {
-        await this.store.iterate((values: number[], baseID: string) => {
-            values.forEach((mu, index) => {
-                if (mu !== undefined) {
-                    const cell = S2.Cell.fromString(baseID);
-                    cell.addArrayIndex(index, this.cellLevel)
-                    callback(cell, mu);
-                }
-            })
+        await this.store.iterate((values: number[], idStr: string) => {
+            const parts = idStr.split("_");
+            console.assert(parts.length === 2, "illegal id str");
 
+            const baseID = parts[0];
+            const level = parseInt(parts[1]);
+            if (level === this.cellLevel) {
+                values.forEach((mu, index) => {
+                    if (mu !== undefined) {
+                        const cell = S2.Cell.fromString(baseID);
+                        cell.addArrayIndex(index, level);
+                        callback(cell, mu);
+                    }
+                })
+            }
         })
     }
 
