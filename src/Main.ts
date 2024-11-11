@@ -4,13 +4,20 @@ import { FieldLogger } from "./FieldLogger";
 import { Mindunits, Result as MUResult } from "./Mindunits";
 import { DebugDialog } from "./ui/debugDialog";
 import myicon from "./ui/images/icon.svg";
-import { CSVExport } from "./lib/CSVExport";
+import { loadFile } from "./lib/FileLoader";
 
 
 const TOOLTIP_DELAY = 100;
 
 const S2MUDetailLevel = 17;
 const S2MULevel = 11;
+
+interface JSONExport {
+    time: number;
+    latlngs: { lat: number, lng: number }[];
+    mindunits: number;
+};
+
 
 class LogFields implements Plugin.Class {
 
@@ -382,21 +389,53 @@ class LogFields implements Plugin.Class {
     async exportFields() {
         const data: any[] = [];
 
-        await this.fieldLog.forEach((ll, mindunits) => {
-            data.push({
-                lat1: ll[0].lat,
-                lng1: ll[0].lng,
-                lat2: ll[1].lat,
-                lng2: ll[1].lng,
-                lat3: ll[2].lat,
-                lng3: ll[2].lng,
-                mindunits
-            })
+        await this.fieldLog.forEach((latlngs, mindunits, time) => {
+            data.push(<JSONExport>{ latlngs, mindunits, time });
         })
 
-        const file = new CSVExport<any>(data, { name: "fields" });
-        file.save();
+        this.saveJson("fields.json", data);
     }
+
+
+    async importFields() {
+        const dataStr = await loadFile({ accept: ".json" });
+
+        let data;
+        try {
+            data = JSON.parse(dataStr);
+        } catch {
+            alert("not a valid json file");
+            return;
+        }
+
+        if (!Array.isArray(data)) {
+            alert("not a valid field export");
+            return;
+        }
+
+        (data as JSONExport[]).forEach(d => {
+            if (d.mindunits > 0 && d.latlngs.length === 3 && d.time > 0) {
+                const position = d.latlngs.map<[number, number]>(l => [l.lat * 1e6, l.lng * 1e6]);
+                void this.fieldLog.storeField(d.time, position, d.mindunits);
+            } else {
+                console.error("wrong data in json (expcet latlng, mindunits, time) ->", d);
+            }
+
+        });
+    }
+
+
+    private saveJson(filename: string, json_object: object) {
+        const content = JSON.stringify(json_object);
+        if (typeof android !== "undefined" && android && (android as any).saveFile) {
+            android.saveFile(filename, "application/json", content);
+        } else {
+            const blob = new Blob([content], { type: "application/json" });
+            saveAs(blob, filename);
+        }
+
+    }
+
 }
 
 

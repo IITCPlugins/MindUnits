@@ -1,7 +1,7 @@
 /* eslint-disable unicorn/filename-case */
 import { saveAs } from "file-saver";
 
-export interface CSVOptions<DataClass> {
+export interface CSVOptions {
     name: string;
     filename: string;
     fields: string[];
@@ -19,15 +19,15 @@ export class CSVExport<DataClass> {
     private fields: string[];
     private lines: DataClass[];
 
-    constructor(lines: DataClass[], options: Partial<CSVOptions<DataClass>>) {
+    constructor(lines: DataClass[], options: Partial<CSVOptions>) {
 
-        this.filename = options.filename || "export.csv";
+        this.filename = options.filename ?? "export.csv";
         if (options.name && !options.filename) this.setFileNameWithDate(options.name);
 
         this.lines = lines;
-        this.fields = options.fields || [];
+        this.fields = options.fields ?? [];
         if (this.fields.length === 0 && this.lines.length > 0) {
-            this.fields = Object.keys(lines[0] as any);
+            this.fields = Object.keys(lines[0] as object);
         };
 
         if (options.optionalFields) {
@@ -37,7 +37,7 @@ export class CSVExport<DataClass> {
 
 
     setFileNameWithDate(name: string): void {
-        const time = window.unixTimeToDateTimeString(new Date()).replace(/\-/g, "_").replace(/:/g, "");
+        const time = window.unixTimeToDateTimeString(new Date()).replace(/-/g, "_").replace(/:/g, "");
         this.filename = `${name}_${time}.csv`;
     }
 
@@ -72,6 +72,7 @@ export class CSVExport<DataClass> {
     private toCSVField(text: any): string {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         if (typeof (text) === "function") text = text();
+        // eslint-disable-next-line unicorn/no-typeof-undefined
         if (typeof (text) === "undefined") return "";
         if (typeof (text) === "number") return text.toString();
         if (typeof (text) !== "string") return "";
@@ -86,13 +87,13 @@ export class CSVExport<DataClass> {
 
 
     removeFieldsIfUnused(fields?: string[]): void {
-        if (!fields) fields = this.fields.slice(0);
+        if (!fields) fields = [...this.fields];
 
         fields.forEach(field => {
             if (this.lines.some(line => (line as any)[field])) return;
 
             const index = this.fields.indexOf(field);
-            if (index >= 0) {
+            if (index !== -1) {
                 this.fields.splice(index, 1);
             }
         })

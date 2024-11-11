@@ -10,8 +10,8 @@ const [count, setCount] = createSignal<number>();
 const DBStatus = () => {
     void main.getStatLogFieldCount().then(c => setCount(c));
     return <div style="border: solid 1px yellow">
-        Known Fields: {count() ? count() : "?"}<br />
-    </div> as any;
+        Known Fields: {count() ?? "?"}<br />
+    </div>;
 }
 
 
@@ -32,6 +32,7 @@ const DebugDialogContent = () => {
         </Show ><br />
         <button onClick={() => main.train()}>Train</button><br />
         <hr></hr>
+        <button onClick={() => main.importFields()}>Import FieldList</button><br />
         <button onClick={() => main.exportFields()}>Export FieldList</button><br />
     </>)
 }
