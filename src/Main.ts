@@ -35,6 +35,7 @@ class LogFields implements Plugin.Class {
     private tooltip: JQuery | undefined;
 
     private isTraining: boolean;
+    private showFieldCells: boolean = true;
 
 
     init() {
@@ -212,7 +213,9 @@ class LogFields implements Plugin.Class {
         }
 
         this.showTooltip(pos, text.join("<br>"));
-        this.showS2Cells(fields.at(-1)!);
+        if (this.showFieldCells) {
+            this.showS2Cells(fields.at(-1)!);
+        }
     }
 
     private async getFieldMUText(field: IITC.Field): Promise<{ text: string, mindunits: number }> {
