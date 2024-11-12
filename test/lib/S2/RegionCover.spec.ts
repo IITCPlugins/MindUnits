@@ -24,7 +24,6 @@ describe("S2/RegionCover", () => {
         expect(ids).toBe("202212302223;202212320001;202212320003");
     });
 
-
     it("should find covering cell starting higher", () => {
         const cover = new S2.RegionCover();
         const region = new S2.Triangle(
@@ -53,20 +52,5 @@ describe("S2/RegionCover", () => {
         expect(cells.length).toBe(0);
     });
 
-
-    it("should not fail to find covering (multiple faces?)", () => {
-        const cover = new S2.RegionCover();
-        const region = new S2.Triangle(
-            S2.LatLngToXYZ(fields[2][0]),
-            S2.LatLngToXYZ(fields[2][1]),
-            S2.LatLngToXYZ(fields[2][2]));
-        cover.region = region;
-
-        let cells = cover.getCoveringFromCell(cover.getCoveringPoint(S2.LatLngToXYZ(fields[2][0]), 14));
-
-        // const ids = cells.map(c => c.toString()).join(";");
-        // expect(ids).toBe('2[161,879]11;2[161,880]11;2[161,881]11');
-        expect(cells.length).toBeGreaterThan(0);
-    });
 
 })

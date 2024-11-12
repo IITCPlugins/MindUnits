@@ -35,7 +35,7 @@ describe("Mindunits", () => {
         await db.trainField(coords, field_mus);
 
         const result = await db.calcMU(coords);
-        expect(result.mindunits).toBe(field_mus);
+        expect(result.mindunits).toBe(field_mus); // NOTE: rounding error may happen
     })
 
 });

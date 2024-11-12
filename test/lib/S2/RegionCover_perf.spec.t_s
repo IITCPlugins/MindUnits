@@ -1,0 +1,29 @@
+import * as S2 from "../../../src/lib/S2";
+
+import * as fieldData1 from '../../fixtures/fields_1.json';
+// import * as fieldData2 from '../../fixtures/fields_2.json';
+type JSONData = { latlngs: S2.LatLng[], mindunits: number, time: number }[];
+
+
+describe("S2/RegionCover-PerfTest", () => {
+
+    it("should find covering cells", () => {
+
+        const start = performance.now()
+
+        console.time("covering");
+        const cover = new S2.RegionCover();
+
+        (fieldData1 as JSONData).forEach(field => {
+            const region = new S2.Triangle(
+                S2.LatLngToXYZ(field.latlngs[0]),
+                S2.LatLngToXYZ(field.latlngs[1]),
+                S2.LatLngToXYZ(field.latlngs[2]));
+
+            cover.getCovering(region, 11, 11);
+        });
+
+        console.log("covering:", performance.now() - start);
+        expect(true).toBeTruthy();
+    })
+)
