@@ -9,8 +9,10 @@ import { loadFile } from "./lib/FileLoader";
 
 const TOOLTIP_DELAY = 100;
 
-const S2MUDetailLevel = 17;
-const S2MULevel = 11;
+// Level 17 => 70x70m - 4900m²
+// Level 19 => 20x20m - 300m²
+const S2MUDetailLevel = 19; // cell level used to check what is indide/outside of a field
+const S2MULevel = 11; // cell level used to store values
 
 interface JSONExport {
     time: number;
