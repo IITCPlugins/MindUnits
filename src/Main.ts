@@ -160,11 +160,12 @@ class LogFields implements Plugin.Class {
     }
 
     pnpoly(polygon: L.Point[], point: L.Point) {
-        let inside = 0;
+        let inside = false;
         for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-            // @ts-ignore
-            inside ^= polygon[i].y > point.y !== polygon[j].y > point.y &&
-                point.x - polygon[i].x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y);
+            if ((polygon[i].y > point.y) !== (polygon[j].y > point.y) &&
+                point.x < (polygon[j].x - polygon[i].x) * (point.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x) {
+                inside = !inside;
+            }
         }
         return !!inside;
     }
@@ -211,6 +212,7 @@ class LogFields implements Plugin.Class {
         }
 
         this.showTooltip(pos, text.join("<br>"));
+        this.showS2Cells(fields.at(-1)!);
     }
 
     private async getFieldMUText(field: IITC.Field): Promise<{ text: string, mindunits: number }> {
@@ -311,7 +313,7 @@ class LogFields implements Plugin.Class {
             const cornersLL = corners.map(c => S2.XYZToLatLng(c));
             cornersLL.push(cornersLL[0]);
 
-            return new L.GeodesicPolyline(cornersLL, {});
+            return new L.GeodesicPolyline(cornersLL, { color: "#CCCC00" });
         })
 
         this.s2Cells = new L.LayerGroup(theCells);

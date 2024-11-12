@@ -27,11 +27,10 @@ export class RenderCells {
     }
 
     private renderCell(cell: S2.Cell, mindunits: number) {
-        const corners = cell.getCornerXYZ();
-        const cornersLL = corners.map(c => S2.XYZToLatLng(c));
+        const cornersLL = cell.getCornerLatLngs();
         cornersLL.push(cornersLL[0]);
 
-        this.layer!.addLayer(new L.GeodesicPolyline(cornersLL, { color: "#CCCC00" }));
+        this.layer!.addLayer(new L.GeodesicPolyline(cornersLL, { color: "#aa11aa" }));
 
         const center = L.latLng((cornersLL[0].lat + cornersLL[2].lat) / 2, (cornersLL[0].lng + cornersLL[2].lng) / 2);
         const marker = L.marker(center, {

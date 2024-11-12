@@ -15,9 +15,9 @@ export class RegionCover {
 
     getCoveringFromCell(start: Cell): Cell[] {
         const cells: Cell[] = [];
-        const frontier = new Set<string>();
+        const processed = new Set<string>();
         const stack = [start];
-        frontier.add(start.toString());
+        processed.add(start.toString());
 
         while (stack.length > 0) {
             const s = stack.pop()!;
@@ -25,8 +25,8 @@ export class RegionCover {
 
             cells.push(s);
             for (const ns of s.getNeighbors()) {
-                if (!frontier.has(ns.toString())) {
-                    frontier.add(ns.toString());
+                if (!processed.has(ns.toString())) {
+                    processed.add(ns.toString());
                     stack.push(ns);
                 }
             }
