@@ -6,7 +6,6 @@
     "moduleResolution": "node",
     "allowJs": false,
     "jsx": "preserve",
-    "jsxImportSource": "solid-js",
     "typeRoots": [
       "node_modules/@types",
       "types"

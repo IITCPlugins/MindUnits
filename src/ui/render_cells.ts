@@ -1,19 +1,10 @@
-import { createSignal } from "solid-js";
 import * as S2 from "../lib/S2";
 import { main } from "../Main";
 
 
 export class RenderCells {
 
-    public areVisible: () => boolean;
-    private setVisible: (show: boolean) => void;
-
     private layer: L.LayerGroup<any> | undefined;
-
-    constructor() {
-        [this.areVisible, this.setVisible] = createSignal<boolean>(false);
-    }
-
 
     show(): void {
         this.hide();
@@ -23,7 +14,10 @@ export class RenderCells {
         void main.muDB.getDensityMap().forEach((cell, mindunits) => this.renderCell(cell, mindunits));
 
         window.map.addLayer(this.layer);
-        this.setVisible(true);
+    }
+
+    areVisible(): boolean {
+        return !!this.layer;
     }
 
     private renderCell(cell: S2.Cell, mindunits: number) {
@@ -47,7 +41,6 @@ export class RenderCells {
         if (this.layer) {
             window.map.removeLayer(this.layer);
             this.layer = undefined;
-            this.setVisible(false);
         }
     }
 }

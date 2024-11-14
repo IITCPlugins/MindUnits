@@ -1,17 +1,9 @@
-import { createSignal } from "solid-js";
 import { main } from "../Main";
 
 
 export class RenderFields {
 
-    public areVisible: () => boolean;
-    private setVisible: (show: boolean) => void;
-
     private layer: L.LayerGroup<any> | undefined;
-
-    constructor() {
-        [this.areVisible, this.setVisible] = createSignal<boolean>(false);
-    }
 
 
     show(): void {
@@ -19,7 +11,7 @@ export class RenderFields {
 
         this.layer = new L.LayerGroup();
 
-        main.fieldLog.forEach((latlngs, mindunits) => {
+        void main.fieldLog.forEach((latlngs, mindunits, time) => {
 
             latlngs.push(latlngs[0]);
             this.layer!.addLayer(new L.GeodesicPolyline(latlngs, { color: "#f0CC00" }));
@@ -37,14 +29,17 @@ export class RenderFields {
         })
 
         window.map.addLayer(this.layer);
-        this.setVisible(true);
     }
+
+    areVisible(): boolean {
+        return !!this.layer;
+    }
+
 
     hide(): void {
         if (this.layer) {
             window.map.removeLayer(this.layer);
             this.layer = undefined;
-            this.setVisible(false);
         }
     }
 }
