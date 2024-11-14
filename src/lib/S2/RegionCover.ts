@@ -1,4 +1,4 @@
-import { XYZ, Level, XYZToFaceUV, UVToST, STToIJ } from ".";
+import { XYZ, Level, XYZToFaceUV, UVToST, STToIJ, Face } from ".";
 import { Cell } from "./Cell";
 import { Region } from "./Region";
 
@@ -13,52 +13,31 @@ export class RegionCover {
         return Cell.FromFaceIJ(face, ij, level);
     }
 
-    getCoveringFromCell(start: Cell): Cell[] {
-        const cells: Cell[] = [];
-        const processed = new Set<string>();
-        const stack = [start];
-        processed.add(start.toString());
-
-        while (stack.length > 0) {
-            const s = stack.pop()!;
-            if (!this.region.mayIntersect(s)) continue;
-
-            cells.push(s);
-            for (const ns of s.getNeighbors()) {
-                if (!processed.has(ns.toString())) {
-                    processed.add(ns.toString());
-                    stack.push(ns);
-                }
-            }
-        }
-        return cells;
-    }
-
     getCovering(region: Region, level_min: Level, level_max: Level): Cell[] {
         if (level_min > level_max) {
-            [level_min, level_max] = [level_max, level_min];
-            console.warn("s2.getCovering: level-min > level-max");
+            throw new Error("s2.getCovering: level-min > level-max");
         }
+
         this.region = region;
         if (this.region.empty()) return [];
 
-        let currentCells = this.getCoveringFromCell(this.getCoveringPoint(this.region.points[0], level_min));
+        let currentCells = this.getCoveringFaces();
+        let level = 0;
 
         let final: Cell[] = [];
-        while (level_min < level_max && currentCells.length > 0) {
+        while (level < level_max && currentCells.length > 0) {
             const newCells: Cell[] = [];
             currentCells.forEach(cell => {
 
                 if (region.contains(cell)) {
-                    final.push(cell);
+                    this.addCellsRecursive(cell, final, level_min);
                 } else {
                     const inside = cell.getChildren().filter(c => this.region.mayIntersect(c));
                     newCells.push(...inside);
                 }
-
             });
 
-            level_min++;
+            level++;
             currentCells = newCells;
         }
 
@@ -68,6 +47,25 @@ export class RegionCover {
         return final;
     }
 
+
+    private getCoveringFaces(): Cell[] {
+        const cells: Cell[] = [];
+        for (let face = 0; face < 6; face++) {
+            const cell = Cell.FromFace(face as Face);
+            if (this.region.mayIntersect(cell))
+                cells.push(cell);
+        }
+
+        return cells;
+    }
+
+    private addCellsRecursive(base: Cell, result: Cell[], level: number) {
+        if (base.level === level) {
+            result.push(base);
+        } else {
+            base.getChildren().forEach(c => this.addCellsRecursive(c, result, level));
+        }
+    }
 
     howManyIntersect(region: Region, cell: Cell, level: Level): number {
         let total = 0;

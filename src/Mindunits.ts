@@ -13,20 +13,19 @@ export interface Result {
 
 export class Mindunits {
 
-    private densityMap: DensityMap;
+    protected densityMap: DensityMap;
 
     // options
     private S2MULevel: number;
     private S2MUDetailLevel: number;
     private S2MUDetailFactor: number;
 
-    constructor(cell_level: number = 11, detail_level: number = 17) {
+    constructor(cell_level: number = 11, detail_level: number = 19) {
         this.densityMap = new DensityMap(cell_level - 5, cell_level);
 
         this.S2MULevel = cell_level;
         this.S2MUDetailLevel = detail_level;
         this.S2MUDetailFactor = Math.pow(4, this.S2MUDetailLevel - this.S2MULevel);
-
     }
 
     // for debug/info
@@ -81,15 +80,6 @@ export class Mindunits {
             });
             await this.densityMap.setCellsValues(cells, newValues);
         }
-
-        //  Example:
-        // (Iteration. Field -> cells)
-        //  1. 1000Mu Left        -> 500 500 -     
-        //  1. 500Mu Right        -> 500 375 250
-        //  2. 1000Mu Left +125   -> 562 437 250    
-        //  2. 500Mu Right -187   -> 562 344 157
-        //  3. 1000Mu Left +94    -> 609 435 157
-        //  3. 500Mu Right -92    -> 609 389 203
     }
 
 

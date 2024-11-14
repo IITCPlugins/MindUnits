@@ -35,6 +35,16 @@ export class Cell {
         return cell;
     }
 
+    static FromFace(face: Face): Cell {
+        const cell = new Cell();
+        cell.face = face;
+        cell.ij = [0, 0];
+        cell.level = 0;
+        cell.uvBound = [[-1, -1], [1, 1]];
+
+        return cell;
+    }
+
     /**
      * Create cell by face and hilbertcurve position
      * (this is like the original CellID construction)
