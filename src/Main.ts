@@ -2,7 +2,7 @@ import * as Plugin from "iitcpluginkit";
 import * as S2 from "./lib/S2";
 import { FieldLogger } from "./FieldLogger";
 import { Mindunits, Result as MUResult } from "./Mindunits";
-import { DebugDialog } from "./ui/debugDialog";
+import { DebugDialog } from "./ui/DebugDialog";
 import myicon from "./ui/images/icon.svg";
 import { loadFile } from "./lib/FileLoader";
 
