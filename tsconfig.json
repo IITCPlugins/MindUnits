@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "module": "es6",
-    "target": "es2018",
+    "module": "es2022",
+    "target": "es2022",
     "outDir": "dist/",
     "moduleResolution": "node",
     "allowJs": false,
