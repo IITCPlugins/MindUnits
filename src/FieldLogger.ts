@@ -367,16 +367,16 @@ export class FieldLogger {
     }
 
     guid2pos(guid: string): Position[] {
-        const params = guid.split(",");
-        if (params.length !== 6) {
+        const coords = guid.split(",");
+        if (coords.length !== 6) {
             console.error("wrong guid:", guid);
             return [];
         }
 
         return [
-            [Number(params[0]), Number(params[1])],
-            [Number(params[2]), Number(params[3])],
-            [Number(params[4]), Number(params[5])]
+            [Number(coords[0]), Number(coords[1])],
+            [Number(coords[2]), Number(coords[3])],
+            [Number(coords[4]), Number(coords[5])]
         ];
     }
 

@@ -60,6 +60,7 @@ export class RegionCover {
     }
 
     private addCellsRecursive(base: Cell, result: Cell[], level: number) {
+        console.assert(base.level <= level, "base.level must be <= level");
         if (base.level === level) {
             result.push(base);
         } else {
